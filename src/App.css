@@ -74,8 +74,8 @@
     position: relative;
     isolation: isolate;
     box-sizing: border-box;
-    height: calc(100vh - 0);
-    margin: 0;
+    height: calc(100vh - 0px);
+    margin: 0x;
     overflow: hidden;
     border: 1px solid rgba(123, 224, 196, .22);
     background:

@@ -88,34 +88,10 @@ function App() {
 return (
   <div className="app-background flex h-screen flex-col overflow-hidden text-ink">
     {/* Titlebar stays fixed at the top */}
-    <Titlebar />
+    <Titlebar isConnected={lampConnection} />
 
     {/* Scrollbar lives strictly inside this container below the titlebar */}
-    <main className="flex-1 overflow-y-auto px-6 pb-8 pt-5 md:px-12 md:pb-16">
-      <header className="mx-auto mb-10 flex max-w-[1180px] items-end justify-between gap-8 max-md:mb-8 max-md:flex-col max-md:items-start">
-        <div>
-          <p className="mb-3 text-[11px] font-bold uppercase tracking-[.15em] text-accent">
-            LampZ Sync / Control center
-          </p>
-        </div>
-        <div
-          className={`flex items-center gap-2.5 whitespace-nowrap border px-3.5 py-2.5 text-xs font-bold uppercase tracking-[.08em] ${
-            lampConnection
-              ? "border-status-online-border text-accent"
-              : "border-status-offline-border text-status-offline-text"
-          }`}
-        >
-          <span
-            className={`h-2 w-2 rounded-full ${
-              lampConnection
-                ? "bg-status-online shadow-status-online"
-                : "bg-status-offline shadow-status-offline"
-            }`}
-          />
-          <span>{lampConnection ? "Connected" : "Not connected"}</span>
-        </div>
-      </header>
-
+    <main className="flex-1 overflow-y-auto px-6 pb-6 pt-6 md:px-12 md:pb-10">
       <div className="mx-auto grid max-w-[1180px] grid-cols-[minmax(260px,.75fr)_minmax(420px,1.25fr)] items-start gap-5 max-md:grid-cols-1">
         <form
           onSubmit={(e) => {
@@ -128,7 +104,7 @@ return (
           }}
         >
           <Panel index="01" title="Device connection" sticky>
-            <div className="my-7 grid gap-5">
+            <div className="my-5 grid gap-4">
               <div className="grid gap-2">
                 <label className="text-[13px] font-semibold text-label" htmlFor="id">
                   Lamp ID
@@ -182,7 +158,7 @@ return (
           }}
         >
           <Panel index="02" title="Visual response">
-            <div className="flex flex-col gap-5 pt-5">
+            <div className="flex flex-col gap-4 pt-4">
               <section className="grid gap-2">
                 <label className="text-[13px] font-semibold text-label" htmlFor="monitor">
                   Monitor
@@ -213,7 +189,7 @@ return (
                   onChange={(v) => setLampTuning((c) => ({ ...c, poll_interval_ms: v }))}
                 />
               </section>
-              <section className="grid gap-4">
+              <section className="grid gap-3">
                 <p className="m-0 text-[11px] font-bold uppercase tracking-[.15em] text-section">
                   Color sensitivity
                 </p>

@@ -1,13 +1,13 @@
-import { useState, useEffect, type ReactNode } from "react";
+import { useState, useEffect } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
 type TitlebarProps = {
   title?: string;
   className?: string;
-  children?: ReactNode;
+  isConnected?: boolean;
 };
 
-function Titlebar({ title = "LampZ Sync", className = "" }: TitlebarProps) {
+function Titlebar({ title = "LampZ Sync", className = "", isConnected = false }: TitlebarProps) {
   const [isMaximized, setIsMaximized] = useState(false);
 
   const appWindow = getCurrentWindow();
@@ -49,13 +49,28 @@ function Titlebar({ title = "LampZ Sync", className = "" }: TitlebarProps) {
         <span className="flex h-6 w-6 items-center justify-center border border-accent/40 bg-accent/10 font-mono text-[10px] font-bold tracking-[-.08em] text-accent">
           LZ
         </span>
-        <div data-tauri-drag-region className="flex items-baseline gap-2">
+        <div data-tauri-drag-region className="flex items-center gap-3">
           <span className="text-[13px] font-semibold tracking-wide text-ink">{title}</span>
-          <span className="hidden text-[10px] font-bold uppercase tracking-[.16em] text-muted sm:inline">Desktop sync</span>
         </div>
       </div>
 
-      <div className="flex h-full">
+      <div className="flex h-full items-center">
+        <div
+          className={`mr-3 flex items-center gap-2 whitespace-nowrap text-[10px] font-bold uppercase tracking-[.08em] ${
+            isConnected ? "text-accent" : "text-status-offline-text"
+          }`}
+          aria-live="polite"
+        >
+          <span
+            className={`h-1.5 w-1.5 rounded-full ${
+              isConnected
+                ? "bg-status-online shadow-status-online"
+                : "bg-status-offline shadow-status-offline"
+            }`}
+          />
+          <span>{isConnected ? "Connected" : "Not connected"}</span>
+        </div>
+
         <button
           onClick={handleMinimize}
           className="flex h-full w-11 items-center justify-center text-muted transition-colors hover:bg-white/10 hover:text-ink focus:outline-none focus:ring-1 focus:ring-inset focus:ring-accent active:bg-white/5"

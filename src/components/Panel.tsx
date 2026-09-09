@@ -15,7 +15,7 @@ function Panel({
 }) {
     return (
         <div
-            className={`border border-line bg-panel p-6 shadow-panel md:p-8 ${sticky ? "sticky top-6 max-md:static" : ""} ${className}`}
+            className={`border border-line bg-panel p-5 shadow-panel md:p-6 ${sticky ? "sticky top-6 max-md:static" : ""} ${className}`}
         >
             <div className="flex items-start gap-3.5 border-b border-line pb-5">
                 <span className="font-mono text-xs font-bold leading-tight text-accent">{index}</span>

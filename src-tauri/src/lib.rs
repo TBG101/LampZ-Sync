@@ -9,33 +9,41 @@ mod lamp;
 mod lamp_thread;
 mod screen_capture;
 
-use serde::{Deserialize, Serialize};
 use std::sync::{
     mpsc::{self, Receiver},
-    Arc, Condvar, Mutex, RwLock,
+    Arc, Condvar, Mutex,
 };
-use tauri::AppHandle;
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Manager,
+    AppHandle, Manager,
 };
 
 use crate::{
-    app_state::{AppState, LampMailbox}, color::Rgb, commands::{
+    app_state::{AppState, LampMailbox},
+    commands::{
         connect_lamp, get_config, get_device_info, get_monitors, set_monitor, update_lamp_tuning,
-    }, config::Config,
+    },
+    config::Config,
 };
+
+fn show_main_window(app: &AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.show();
+        let _ = window.unminimize();
+        let _ = window.set_focus();
+    }
+}
 
 fn start_lampz_sync(
     state: Arc<AppState>,
     app: &AppHandle,
     monitor_sender: Receiver<String>,
-    inital_device_name: Option<String>,
+    initial_device_name: Option<String>,
 ) {
     let mailbox = Arc::clone(&state.mailbox);
 
-    capture_thread::start_capture_thread(Arc::clone(&mailbox), monitor_sender, inital_device_name);
+    capture_thread::start_capture_thread(Arc::clone(&mailbox), monitor_sender, initial_device_name);
 
     lamp_thread::start_lamp_thread(&app.clone());
 }
@@ -54,8 +62,8 @@ pub fn run() {
     let (monitor_tx, monitor_rx) = mpsc::channel::<String>();
 
     let state = Arc::new(AppState {
-        config: RwLock::new(Config::default()),
-        mailbox: mailbox,
+        config: std::sync::RwLock::new(Config::default()),
+        mailbox,
         monitor_sender: monitor_tx,
     });
 
@@ -68,11 +76,7 @@ pub fn run() {
             None,
         ))
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-            if let Some(window) = app.get_webview_window("main") {
-                let _ = window.show();
-                let _ = window.unminimize();
-                let _ = window.set_focus();
-            }
+            show_main_window(app);
         }))
         .setup(move |app| {
             // Load persisted config
@@ -98,41 +102,30 @@ pub fn run() {
             // Create tray icon
             // -------------------------
 
-            TrayIconBuilder::new()
+            let mut tray = TrayIconBuilder::new()
                 .menu(&menu)
-                .show_menu_on_left_click(false)
-                .on_menu_event(|app, event| match event.id.as_ref() {
-                    "show" => {
-                        if let Some(window) = app.get_webview_window("main") {
-                            let _ = window.show();
-                            let _ = window.unminimize();
-                            let _ = window.set_focus();
-                        }
-                    }
+                .show_menu_on_left_click(false);
 
-                    "quit" => {
-                        app.exit(0);
-                    }
+            if let Some(icon) = app.default_window_icon() {
+                tray = tray.icon(icon.clone());
+            }
 
-                    _ => {}
-                })
-                .on_tray_icon_event(|tray, event| {
-                    if let TrayIconEvent::Click {
-                        button: MouseButton::Left,
-                        button_state: MouseButtonState::Up,
-                        ..
-                    } = event
-                    {
-                        let app = tray.app_handle();
-
-                        if let Some(window) = app.get_webview_window("main") {
-                            let _ = window.show();
-                            let _ = window.unminimize();
-                            let _ = window.set_focus();
-                        }
-                    }
-                })
-                .build(app)?;
+            tray.on_menu_event(|app, event| match event.id.as_ref() {
+                "show" => show_main_window(app),
+                "quit" => app.exit(0),
+                _ => {}
+            })
+            .on_tray_icon_event(|tray, event| {
+                if let TrayIconEvent::Click {
+                    button: MouseButton::Left,
+                    button_state: MouseButtonState::Up,
+                    ..
+                } = event
+                {
+                    show_main_window(tray.app_handle());
+                }
+            })
+            .build(app)?;
 
             // Start workers after config has been loaded
             start_lampz_sync(
@@ -143,12 +136,10 @@ pub fn run() {
             );
 
             if let Some(window) = app.get_webview_window("main") {
-                let app_handle = app.handle().clone();
                 let window_for_event = window.clone();
                 window.on_window_event(move |event| {
                     if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                         api.prevent_close();
-
                         let _ = window_for_event.hide();
                     }
                 });
