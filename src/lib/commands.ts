@@ -22,6 +22,15 @@ type LampConfig = {
         lamp_key: string | null;
     };
     lamp_tuning: LampTuning;
+    monitor_device_name: string | null;
+};
+
+type MonitorInfo = {
+    device_name: string;
+    name: string;
+    width: number;
+    height: number;
+    refresh_rate: number;
 };
 
 async function invokeConnectLamp(device: LampDeviceInfo) {
@@ -42,6 +51,20 @@ async function invokeUpdateLampTuning(lampTuning: LampTuning) {
     await invoke("update_lamp_tuning", { lampTuning });
 }
 
+async function getMonitors(): Promise<MonitorInfo[]> {
+    return await invoke("get_monitors");
+}
 
-export { invokeConnectLamp, getConfig, getDeviceInfo, invokeUpdateLampTuning };
-export type { LampConfig, LampDeviceInfo, LampTuning };
+async function setMonitor(deviceName: string): Promise<void> {
+    await invoke("set_monitor", { deviceName });
+}
+
+export {
+    getConfig,
+    getDeviceInfo,
+    getMonitors,
+    invokeConnectLamp,
+    invokeUpdateLampTuning,
+    setMonitor,
+};
+export type { LampConfig, LampDeviceInfo, LampTuning, MonitorInfo };

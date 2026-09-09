@@ -1,17 +1,45 @@
-use crate::SharedMailbox;
-use crate::screen_capture::ScreenCapture;
-use crate::{detector::detect_color, LampMailbox};
-use std::time::{Duration, Instant};
+use windows_capture::monitor::Monitor;
 
-pub fn start_capture_thread(mail_box: SharedMailbox) {
+use crate::detector::detect_color;
+use crate::screen_capture::ScreenCapture;
+use crate::SharedMailbox;
+use std::{
+    sync::mpsc::Receiver,
+    time::{Duration, Instant},
+};
+
+fn find_monitor(m_device_name: &str) -> Monitor {
+    let monitors = Monitor::enumerate().unwrap();
+
+    monitors
+        .into_iter()
+        .find(|m| m.device_name().unwrap() == m_device_name)
+        .or_else(|| Monitor::enumerate().unwrap().into_iter().next())
+        .expect("No monitors available")
+}
+
+pub fn start_capture_thread(
+    mail_box: SharedMailbox,
+    monitor_rx: Receiver<String>,
+    initial_monitor_device_name: Option<String>,
+) {
     std::thread::spawn(move || {
-        let mut screen_capture = match ScreenCapture::new(2) {
-            Ok(capture) => capture,
-            Err(e) => {
-                eprintln!("Failed to initialize screen capture: {}", e);
-                return;
-            }
+        let mut current_monitor_device_name = match initial_monitor_device_name {
+            Some(device_name) => find_monitor(&device_name).device_name().unwrap(),
+            None => Monitor::primary()
+                .unwrap()
+                .device_name()
+                .expect("No monitors available"),
         };
+
+        let mut screen_capture =
+            match ScreenCapture::new(find_monitor(&current_monitor_device_name).index().unwrap()) {
+                Ok(capture) => capture,
+                Err(e) => {
+                    eprintln!("Failed to initialize screen capture: {}", e);
+                    return;
+                }
+            };
 
         let mut frames = 0u64;
         let mut capture_time = Duration::ZERO;
@@ -19,6 +47,24 @@ pub fn start_capture_thread(mail_box: SharedMailbox) {
         let mut last_report = Instant::now();
 
         loop {
+            // Drain pending changes and keep only the newest one.
+            if let Some(requested_monitor_d_name) = monitor_rx.try_iter().last() {
+                if requested_monitor_d_name != current_monitor_device_name {
+                    let selected_m = find_monitor(&requested_monitor_d_name);
+
+                    match ScreenCapture::new(selected_m.index().unwrap()) {
+                        Ok(new_capture) => {
+                            screen_capture = new_capture;
+                            current_monitor_device_name = requested_monitor_d_name;
+                            println!("Switched monitor");
+                        }
+                        Err(error) => {
+                            eprintln!("Failed to switch monitor: {error}");
+                        }
+                    }
+                }
+            }
+
             let frame_start = Instant::now();
 
             let _ = screen_capture.process_frame(|buffer, width, height| {

@@ -8,12 +8,18 @@ mod lamp_thread;
 mod screen_capture;
 
 use serde::{Deserialize, Serialize};
-use std::sync::{Arc, Condvar, Mutex, RwLock};
+use std::sync::{
+    mpsc::{self, Receiver},
+    Arc, Condvar, Mutex, RwLock,
+};
 use tauri::AppHandle;
 
 use crate::{
     color::Rgb,
-    commands::{connect_lamp, get_config, get_device_info, update_lamp_tuning},
+    commands::{
+        connect_lamp, get_config, get_device_info, get_monitors, set_monitor,
+        update_lamp_tuning,
+    },
 };
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
@@ -58,17 +64,24 @@ pub type SharedMailbox = Arc<(Mutex<LampMailbox>, Condvar)>;
 pub struct Config {
     pub lamp_connection: LampConnection,
     pub lamp_tuning: LampTuning,
+    pub monitor_device_name: Option<String>,
 }
 
 pub struct AppState {
     pub config: RwLock<Config>,
     pub mailbox: SharedMailbox,
+    pub monitor_sender: std::sync::mpsc::Sender<String>,
 }
 
-fn start_lampz_sync(state: Arc<AppState>, app: &AppHandle) {
+fn start_lampz_sync(
+    state: Arc<AppState>,
+    app: &AppHandle,
+    monitor_sender: Receiver<String>,
+    inital_device_name: Option<String>,
+) {
     let mailbox = Arc::clone(&state.mailbox);
 
-    capture_thread::start_capture_thread(Arc::clone(&mailbox));
+    capture_thread::start_capture_thread(Arc::clone(&mailbox), monitor_sender, inital_device_name);
 
     lamp_thread::start_lamp_thread(&app.clone());
 }
@@ -83,9 +96,13 @@ pub fn run() {
         }),
         Condvar::new(),
     ));
+
+    let (monitor_tx, monitor_rx) = mpsc::channel::<String>();
+
     let state = Arc::new(AppState {
         config: RwLock::new(Config::default()),
         mailbox: mailbox,
+        monitor_sender: monitor_tx,
     });
 
     tauri::Builder::default()
@@ -99,11 +116,16 @@ pub fn run() {
             // Put persisted config into runtime state
             {
                 let mut state_config = state.config.write().unwrap();
-                *state_config = config;
+                *state_config = config.clone();
             }
 
             // Start workers after config has been loaded
-            start_lampz_sync(Arc::clone(&state), &app.handle());
+            start_lampz_sync(
+                Arc::clone(&state),
+                &app.handle(),
+                monitor_rx,
+                config.monitor_device_name.clone(),
+            );
 
             Ok(())
         })
@@ -111,6 +133,8 @@ pub fn run() {
             connect_lamp,
             get_config,
             get_device_info,
+            get_monitors,
+            set_monitor,
             update_lamp_tuning
         ])
         .run(tauri::generate_context!())

@@ -6,8 +6,7 @@ function Input({ className = "", ...props }) {
             autoCapitalize="off"
             spellCheck={false}
             data-lpignore="true"
-            className={`rounded-md border border-win-border bg-win-surface px-3 py-2 text-win-text 
-                outline-none transition focus:border-win-accent focus:ring-2 focus:ring-win-accent/20 ${className}`}
+            className={`h-11 w-full rounded-none border border-line bg-input px-3 text-sm text-ink outline-none transition-colors placeholder:text-muted/70 hover:border-input-hover focus:border-accent focus:ring-2 focus:ring-accent/20 ${className}`}
             {...props}
         />
     );

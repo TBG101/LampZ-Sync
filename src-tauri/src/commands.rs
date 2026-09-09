@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use windows_capture::monitor::Monitor;
 
 use crate::{app_store::save_config, AppState, Config, LampConnection, LampTuning};
 
@@ -13,6 +14,66 @@ pub struct LampDeviceInfo {
 
     #[serde(rename = "lampKey")]
     pub lamp_key: String,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct MonitorInfo {
+    pub device_name: String,
+    pub name: String,
+    pub width: u32,
+    pub height: u32,
+    pub refresh_rate: u32,
+}
+
+#[tauri::command]
+pub fn get_monitors() -> Result<Vec<MonitorInfo>, String> {
+    Monitor::enumerate()
+        .map_err(|error| error.to_string())?
+        .into_iter()
+        .map(|monitor| {
+            Ok(MonitorInfo {
+                device_name: monitor.device_name().map_err(|error| error.to_string())?,
+                name: monitor.name().map_err(|error| error.to_string())?,
+                width: monitor.width().map_err(|error| error.to_string())?,
+                height: monitor.height().map_err(|error| error.to_string())?,
+                refresh_rate: monitor.refresh_rate().map_err(|error| error.to_string())?,
+            })
+        })
+        .collect()
+}
+
+#[tauri::command]
+pub fn set_monitor(
+    app_handle: tauri::AppHandle,
+    state: tauri::State<'_, Arc<AppState>>,
+    device_name: String,
+) -> Result<(), String> {
+    let monitor_exists = Monitor::enumerate()
+        .map_err(|error| error.to_string())?
+        .into_iter()
+        .any(|monitor| {
+            monitor
+                .device_name()
+                .map(|name| name == device_name)
+                .unwrap_or(false)
+        });
+
+    if !monitor_exists {
+        return Err("Monitor no longer exists".to_string());
+    }
+
+    let new_config = {
+        let mut config = state.config.write().unwrap();
+        config.monitor_device_name = Some(device_name.clone());
+        config.clone()
+    };
+
+    state
+        .monitor_sender
+        .send(device_name)
+        .map_err(|error| error.to_string())?;
+
+    save_config(&app_handle, &new_config)
 }
 
 #[tauri::command]
@@ -34,6 +95,7 @@ pub fn connect_lamp(
         let new_config = Config {
             lamp_connection: new_lamp_connection.clone(),
             lamp_tuning: current_config.lamp_tuning.clone(),
+            monitor_device_name: current_config.monitor_device_name.clone(),
         };
 
         *current_config = new_config.clone();
@@ -51,7 +113,6 @@ pub fn connect_lamp(
 
     Ok(())
 }
-
 
 #[tauri::command]
 pub fn get_device_info(state: tauri::State<'_, Arc<AppState>>) -> LampDeviceInfo {
