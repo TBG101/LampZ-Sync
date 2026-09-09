@@ -1,7 +1,9 @@
+mod app_state;
 mod app_store;
 mod capture_thread;
 mod color;
 mod commands;
+mod config;
 mod detector;
 mod lamp;
 mod lamp_thread;
@@ -13,65 +15,17 @@ use std::sync::{
     Arc, Condvar, Mutex, RwLock,
 };
 use tauri::AppHandle;
-
-use crate::{
-    color::Rgb,
-    commands::{
-        connect_lamp, get_config, get_device_info, get_monitors, set_monitor,
-        update_lamp_tuning,
-    },
+use tauri::{
+    menu::{Menu, MenuItem},
+    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    Manager,
 };
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
-pub struct LampTuning {
-    pub poll_interval_ms: u64,
-    pub mailbox_timeout_secs: u64,
-    pub gamma: f32,         // the 2.0 in v.powf(2.0)
-    pub hue_threshold: u16, // the 2 in hue_changed
-    pub sat_threshold: u16, // the 10 in saturation_changed
-    pub v_threshold: u16,   // the 10 in v_final.abs_diff(...)
-}
-
-impl Default for LampTuning {
-    fn default() -> Self {
-        Self {
-            poll_interval_ms: 50,
-            mailbox_timeout_secs: 1,
-            gamma: 2.0,
-            hue_threshold: 2,
-            sat_threshold: 10,
-            v_threshold: 10,
-        }
-    }
-}
-
-#[derive(Clone, Default, Debug, serde::Serialize, serde::Deserialize)]
-pub struct LampConnection {
-    pub lamp_id: Option<String>,
-    pub lamp_key: Option<String>,
-    pub lamp_ip: Option<String>,
-}
-
-pub struct LampMailbox {
-    pub latest_color: Option<Rgb>,
-    pub connection_changed: Option<LampConnection>,
-    pub lamp_tuning_changed: Option<LampTuning>,
-}
-
-pub type SharedMailbox = Arc<(Mutex<LampMailbox>, Condvar)>;
-
-#[derive(Debug, Serialize, Deserialize, Clone, Default)]
-pub struct Config {
-    pub lamp_connection: LampConnection,
-    pub lamp_tuning: LampTuning,
-    pub monitor_device_name: Option<String>,
-}
-
-pub struct AppState {
-    pub config: RwLock<Config>,
-    pub mailbox: SharedMailbox,
-    pub monitor_sender: std::sync::mpsc::Sender<String>,
-}
+use crate::{
+    app_state::{AppState, LampMailbox}, color::Rgb, commands::{
+        connect_lamp, get_config, get_device_info, get_monitors, set_monitor, update_lamp_tuning,
+    }, config::Config,
+};
 
 fn start_lampz_sync(
     state: Arc<AppState>,
@@ -109,6 +63,17 @@ pub fn run() {
         .manage(Arc::clone(&state))
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            None,
+        ))
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.show();
+                let _ = window.unminimize();
+                let _ = window.set_focus();
+            }
+        }))
         .setup(move |app| {
             // Load persisted config
             let config = app_store::load_config(&app.handle());
@@ -119,6 +84,56 @@ pub fn run() {
                 *state_config = config.clone();
             }
 
+            // -------------------------
+            // Create tray menu
+            // -------------------------
+
+            let show = MenuItem::with_id(app, "show", "Show LampZ Sync", true, None::<&str>)?;
+
+            let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+
+            let menu = Menu::with_items(app, &[&show, &quit])?;
+
+            // -------------------------
+            // Create tray icon
+            // -------------------------
+
+            TrayIconBuilder::new()
+                .menu(&menu)
+                .show_menu_on_left_click(false)
+                .on_menu_event(|app, event| match event.id.as_ref() {
+                    "show" => {
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.unminimize();
+                            let _ = window.set_focus();
+                        }
+                    }
+
+                    "quit" => {
+                        app.exit(0);
+                    }
+
+                    _ => {}
+                })
+                .on_tray_icon_event(|tray, event| {
+                    if let TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } = event
+                    {
+                        let app = tray.app_handle();
+
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.unminimize();
+                            let _ = window.set_focus();
+                        }
+                    }
+                })
+                .build(app)?;
+
             // Start workers after config has been loaded
             start_lampz_sync(
                 Arc::clone(&state),
@@ -126,6 +141,18 @@ pub fn run() {
                 monitor_rx,
                 config.monitor_device_name.clone(),
             );
+
+            if let Some(window) = app.get_webview_window("main") {
+                let app_handle = app.handle().clone();
+                let window_for_event = window.clone();
+                window.on_window_event(move |event| {
+                    if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                        api.prevent_close();
+
+                        let _ = window_for_event.hide();
+                    }
+                });
+            }
 
             Ok(())
         })

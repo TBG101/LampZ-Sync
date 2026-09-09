@@ -2,7 +2,11 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use windows_capture::monitor::Monitor;
 
-use crate::{app_store::save_config, AppState, Config, LampConnection, LampTuning};
+use crate::{
+    app_store::save_config,
+    config::{LampConnection, LampTuning},
+    AppState, Config,
+};
 
 #[derive(Deserialize, Serialize)]
 pub struct LampDeviceInfo {

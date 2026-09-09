@@ -1,8 +1,7 @@
 use windows_capture::monitor::Monitor;
 
-use crate::detector::detect_color;
+use crate::{app_state::SharedMailbox, detector::detect_color};
 use crate::screen_capture::ScreenCapture;
-use crate::SharedMailbox;
 use std::{
     sync::mpsc::Receiver,
     time::{Duration, Instant},

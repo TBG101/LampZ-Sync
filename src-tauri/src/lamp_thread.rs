@@ -4,9 +4,11 @@ use std::eprintln;
 
 use tauri::{AppHandle, Emitter, Manager};
 
+use crate::app_state::AppState;
 use crate::color::Hsv;
-use crate::{lamp, LampConnection};
-use crate::{AppState, LampTuning};
+use crate::config::{LampConnection, LampTuning};
+use crate::lamp;
+
 
 enum LampEvent {
     LampConnectionChanged(LampConnection),
