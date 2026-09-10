@@ -15,6 +15,13 @@ type LampTuning = {
     v_threshold: number;
 };
 
+type CaptureRegion = {
+    left: number;
+    right: number;
+    top: number;
+    bottom: number;
+};
+
 type LampConfig = {
     lamp_connection: {
         lamp_id: string | null;
@@ -23,6 +30,7 @@ type LampConfig = {
     };
     lamp_tuning: LampTuning;
     monitor_device_name: string | null;
+    capture_regions: CaptureRegion[];
 };
 
 type MonitorInfo = {
@@ -51,6 +59,10 @@ async function invokeUpdateLampTuning(lampTuning: LampTuning) {
     await invoke("update_lamp_tuning", { lampTuning });
 }
 
+async function invokeUpdateCaptureRegions(captureRegions: CaptureRegion[]) {
+    await invoke("update_capture_regions", { captureRegions });
+}
+
 async function getMonitors(): Promise<MonitorInfo[]> {
     return await invoke("get_monitors");
 }
@@ -64,7 +76,8 @@ export {
     getDeviceInfo,
     getMonitors,
     invokeConnectLamp,
+    invokeUpdateCaptureRegions,
     invokeUpdateLampTuning,
     setMonitor,
 };
-export type { LampConfig, LampDeviceInfo, LampTuning, MonitorInfo };
+export type { CaptureRegion, LampConfig, LampDeviceInfo, LampTuning, MonitorInfo };

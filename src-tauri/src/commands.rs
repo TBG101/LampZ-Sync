@@ -5,6 +5,7 @@ use windows_capture::monitor::Monitor;
 use crate::{
     app_store::save_config,
     config::{LampConnection, LampTuning},
+    detector::CaptureRegion,
     AppState, Config,
 };
 
@@ -149,6 +150,27 @@ pub fn update_lamp_tuning(
     {
         let (lock, condvar) = &*state.mailbox;
         lock.lock().unwrap().lamp_tuning_changed = Some(lamp_tuning);
+        condvar.notify_one();
+    }
+
+    save_config(&app_handle, &new_config)
+}
+
+#[tauri::command]
+pub fn update_capture_regions(
+    app_handle: tauri::AppHandle,
+    state: tauri::State<'_, Arc<AppState>>,
+    capture_regions: Vec<CaptureRegion>,
+) -> Result<(), String> {
+    let new_config = {
+        let mut current_config = state.config.write().unwrap();
+        current_config.capture_regions = capture_regions.clone();
+        current_config.clone()
+    };
+
+    {
+        let (lock, condvar) = &*state.mailbox;
+        lock.lock().unwrap().region_changed = Some(capture_regions);
         condvar.notify_one();
     }
 
