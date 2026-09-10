@@ -1,6 +1,7 @@
 import { useEffect, useState, type ChangeEvent } from "react";
 import "./App.css";
 import Button from "./components/Button";
+import CaptureRegionEditor from "./components/CaptureRegionEditor";
 import Input from "./components/Input";
 import MonitorSelect from "./components/MonitorSelect";
 import Panel from "./components/Panel";
@@ -10,8 +11,10 @@ import {
   getConfig,
   getMonitors,
   invokeConnectLamp,
+  invokeUpdateCaptureRegions,
   invokeUpdateLampTuning,
   setMonitor,
+  type CaptureRegion,
   type MonitorInfo,
   type LampTuning,
 } from "./lib/commands";
@@ -42,6 +45,9 @@ function App() {
   const [lampTuning, setLampTuning] = useState<LampTuning>(defaultLampTuning);
   const [monitors, setMonitors] = useState<MonitorInfo[]>([]);
   const [selectedMonitor, setSelectedMonitor] = useState("");
+  const [captureRegions, setCaptureRegions] = useState<CaptureRegion[]>([]);
+  const [captureSaveState, setCaptureSaveState] = useState<"idle" | "saved" | "error">("idle");
+  const [isSavingCaptureRegions, setIsSavingCaptureRegions] = useState(false);
 
   useEffect(() => {
     Promise.all([getConfig(), getMonitors()])
@@ -53,6 +59,7 @@ function App() {
           localKey: config.lamp_connection.lamp_key ?? "",
         });
         setLampTuning(config.lamp_tuning);
+        setCaptureRegions(config.capture_regions);
 
         const savedMonitor = config.monitor_device_name;
         const fallbackMonitor =
@@ -84,6 +91,23 @@ function App() {
       [field]: event.target.value,
     }));
   }
+
+  async function saveCaptureRegions() {
+    setIsSavingCaptureRegions(true);
+    setCaptureSaveState("idle");
+
+    try {
+      await invokeUpdateCaptureRegions(captureRegions);
+      setCaptureSaveState("saved");
+    } catch (error) {
+      console.error(error);
+      setCaptureSaveState("error");
+    } finally {
+      setIsSavingCaptureRegions(false);
+    }
+  }
+
+  const selectedMonitorInfo = monitors.find((monitor) => monitor.device_name === selectedMonitor);
 
 return (
   <div className="app-background flex h-screen flex-col overflow-hidden text-ink">
@@ -242,6 +266,28 @@ return (
             </div>
           </Panel>
         </form>
+
+        <section className="col-span-full max-md:col-span-1">
+          <Panel index="03" title="Capture regions">
+            <div className="pt-4">
+              <p className="mb-4 max-w-2xl text-sm leading-relaxed text-muted">
+                Choose the parts of the selected monitor that should influence the lamp. Regions are combined when the screen color is sampled.
+              </p>
+              <CaptureRegionEditor
+                regions={captureRegions}
+                monitorWidth={selectedMonitorInfo?.width ?? 0}
+                monitorHeight={selectedMonitorInfo?.height ?? 0}
+                onChange={(regions) => {
+                  setCaptureRegions(regions);
+                  setCaptureSaveState("idle");
+                }}
+                onSave={saveCaptureRegions}
+                isSaving={isSavingCaptureRegions}
+                saveState={captureSaveState}
+              />
+            </div>
+          </Panel>
+        </section>
       </div>
     </main>
   </div>

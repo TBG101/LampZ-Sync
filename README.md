@@ -10,6 +10,7 @@ The app runs quietly in the system tray and remembers the configured lamp, monit
 
 - Connect to a lamp using its device ID, local IP address, and local key.
 - Select which connected monitor supplies the ambient color.
+- Map one or more capture regions on the selected monitor, with move, resize, delete, and snapping controls.
 - Tune polling frequency, gamma correction, and color-change thresholds.
 - Persist configuration between launches.
 - Run from the Windows system tray and hide the main window without stopping synchronization.
@@ -49,8 +50,9 @@ In the app:
 
 1. Enter the lamp ID, local IP address, and local key.
 2. Select the monitor to sample.
-3. Adjust the visual response settings if needed.
-4. Choose **Connect lamp**, then save the tuning settings.
+3. Draw one or more capture regions in the **Capture regions** panel. Use **Snap** to align region edges to the 5% grid or monitor boundaries.
+4. Adjust the visual response settings if needed.
+5. Choose **Connect lamp**, then save the tuning and capture-region settings.
 
 ## Useful Commands
 
