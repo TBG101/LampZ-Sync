@@ -1,5 +1,10 @@
 # LampZ Sync
 
+[![Tauri](https://img.shields.io/badge/Tauri-2-24C8D8?logo=tauri&logoColor=white)](https://tauri.app)
+[![Rust](https://img.shields.io/badge/Rust-090909?logo=rust&logoColor=white)](https://www.rust-lang.org)
+[![Platform](https://img.shields.io/badge/Platform-Windows-0078D6?logo=windows&logoColor=white)](https://www.microsoft.com/windows/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+
 LampZ Sync is a Windows desktop application that mirrors the colors on a selected monitor to a compatible Tuya lamp over the local network. It captures the screen locally, converts sampled frames into HSV color data, and only sends meaningful changes to the lamp so the ambient lighting follows the display without unnecessary network traffic.
 
 The app runs quietly in the system tray and remembers the configured lamp, monitor, and visual response settings.
