@@ -100,7 +100,7 @@ function CaptureRegionEditor({
     setSelectedIndex((current) => (current !== null && current < regions.length ? current : regions.length > 0 ? regions.length - 1 : null));
   }, [regions.length]);
 
-  function getPoint(event: ReactPointerEvent<HTMLDivElement>) {
+  function getPoint(event: ReactPointerEvent<HTMLElement>) {
     const bounds = canvasRef.current?.getBoundingClientRect();
     if (!bounds || bounds.width === 0 || bounds.height === 0) return null;
 
@@ -139,7 +139,7 @@ function CaptureRegionEditor({
     setSelectedIndex(index);
   }
 
-  function beginResize(event: ReactPointerEvent<HTMLDivElement>, index: number, handle: Handle) {
+  function beginResize(event: ReactPointerEvent<HTMLElement>, index: number, handle: Handle) {
     const point = getPoint(event);
     const region = regions[index];
     if (!point || !region) return;
