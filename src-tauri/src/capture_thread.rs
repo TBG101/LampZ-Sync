@@ -1,11 +1,11 @@
-use windows_capture::monitor::Monitor;
-
-use crate::{app_state::SharedMailbox, detector::detect_color};
+use crate::detector::CaptureRegion;
 use crate::screen_capture::ScreenCapture;
+use crate::{app_state::SharedMailbox, detector::detect_color};
 use std::{
     sync::mpsc::Receiver,
     time::{Duration, Instant},
 };
+use windows_capture::monitor::Monitor;
 
 fn find_monitor(m_device_name: &str) -> Monitor {
     let monitors = Monitor::enumerate().unwrap();
@@ -21,8 +21,10 @@ pub fn start_capture_thread(
     mail_box: SharedMailbox,
     monitor_rx: Receiver<String>,
     initial_monitor_device_name: Option<String>,
+    initual_capture_region: Vec<CaptureRegion>,
 ) {
     std::thread::spawn(move || {
+        let mut regions = initual_capture_region;
         let mut current_monitor_device_name = match initial_monitor_device_name {
             Some(device_name) => find_monitor(&device_name).device_name().unwrap(),
             None => Monitor::primary()
@@ -64,12 +66,18 @@ pub fn start_capture_thread(
                 }
             }
 
+            let (lock, _) = &*mail_box;
+
+            if let Some(new_regions) = lock.lock().unwrap().region_changed.take() {
+                regions = new_regions;
+            }
+
             let frame_start = Instant::now();
 
             let _ = screen_capture.process_frame(|buffer, width, height| {
                 let start = Instant::now();
 
-                let rgb = match detect_color(buffer, width, height) {
+                let rgb = match detect_color(buffer, width, height, &regions) {
                     Some(value) => value,
                     None => return,
                 };

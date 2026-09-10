@@ -8,6 +8,7 @@ pub struct LampMailbox {
     pub latest_color: Option<Rgb>,
     pub connection_changed: Option<LampConnection>,
     pub lamp_tuning_changed: Option<LampTuning>,
+    pub region_changed: Option<Vec<crate::detector::CaptureRegion>>,
 }
 
 

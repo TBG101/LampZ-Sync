@@ -1,80 +1,126 @@
+use serde::{Deserialize, Serialize};
+
 use crate::color::Rgb;
 use std::collections::HashMap;
 
-/// Returns the single most dominant (R, G, B) color in the frame.
-/// Expects DXGI-style BGRA8 buffer (4 bytes/pixel: B, G, R, A).
+/// Normalized sub-rectangle of a frame. All values in [0.0, 1.0].
+/// `left < right` and `top < bottom` are expected; we clamp defensively.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct CaptureRegion {
+    pub left:   f32,
+    pub right:  f32,
+    pub top:    f32,
+    pub bottom: f32,
+}
+
+impl CaptureRegion {
+    pub const FULL: Self = Self { left: 0.0, right: 1.0, top: 0.0, bottom: 1.0 };
+
+    pub fn clamped(self) -> Self {
+        let (mut l, mut r) = (self.left.clamp(0.0, 1.0), self.right.clamp(0.0, 1.0));
+        let (mut t, mut b) = (self.top.clamp(0.0, 1.0), self.bottom.clamp(0.0, 1.0));
+        if l > r { std::mem::swap(&mut l, &mut r); }
+        if t > b { std::mem::swap(&mut t, &mut b); }
+        Self { left: l, right: r, top: t, bottom: b }
+    }
+}
+
+impl Default for CaptureRegion {
+    fn default() -> Self { Self::FULL }
+}
+
+/// Returns the single most dominant (R, G, B) color across the **union**
+/// of all supplied `regions`. Pixels outside any region are ignored.
 ///
-/// Uses a coarse histogram over quantized RGB buckets instead of
-/// clustering — O(n) single pass, no iteration, no convergence loop.
-pub fn detect_color(buffer: &[u8], width: u32, height: u32) -> Option<Rgb> {
-    let expected_len = (width as usize) * (height as usize) * 4;
+/// Expects DXGI-style BGRA8 buffer (4 bytes/pixel: B, G, R, A).
+pub fn detect_color(
+    buffer: &[u8],
+    width: u32,
+    height: u32,
+    regions: &[CaptureRegion],
+) -> Option<Rgb> {
+    let width_us  = width  as usize;
+    let height_us = height as usize;
+    let expected_len = width_us * height_us * 4;
     if buffer.len() < expected_len {
-        eprintln!(
-            "buffer too small: got {}, expected {}",
-            buffer.len(),
-            expected_len
-        );
+        eprintln!("buffer too small: got {}, expected {}", buffer.len(), expected_len);
+        return None;
+    }
+    if regions.is_empty() {
         return None;
     }
 
-    let total_pixels = (width as usize) * (height as usize);
-    if total_pixels == 0 {
-        return None;
-    }
-
-    // Fixed sample budget regardless of resolution. 2-3k samples is plenty
-    // to find the dominant color reliably.
-    const TARGET_SAMPLES: usize = 2500;
-    let stride_pixels = (total_pixels / TARGET_SAMPLES).max(1);
-    let stride_bytes = stride_pixels * 4;
-
-    // Quantize each channel into 16 buckets (>> 4) — coarse enough to be
-    // fast and robust to noise, fine enough to distinguish real colors.
-    const SHIFT: u32 = 4;
+    const SHIFT: u32   = 4;
     const BUCKETS: usize = 1 << (8 - SHIFT); // 16
 
-    // Track bucket counts AND the running sum of raw values per bucket,
-    // so we can return the actual average color within the winning
-    // bucket rather than just the bucket's quantized midpoint.
-    let mut counts: HashMap<u16, u32> = HashMap::with_capacity(64);
-    let mut sums: HashMap<u16, (u32, u32, u32)> = HashMap::with_capacity(64);
+    const TARGET_SAMPLES_PER_REGION: usize = 2500;
 
-    let mut i = 0usize;
-    while i < buffer.len() - 3 {
-        let b = buffer[i];
-        let g = buffer[i + 1];
-        let r = buffer[i + 2];
+    let mut counts: HashMap<u16, u32>              = HashMap::with_capacity(64);
+    let mut sums:   HashMap<u16, (u32, u32, u32)>  = HashMap::with_capacity(64);
 
-        let key = pack_key(r >> SHIFT, g >> SHIFT, b >> SHIFT, BUCKETS as u8);
+    let row_stride_bytes = width_us * 4;
 
-        *counts.entry(key).or_insert(0) += 1;
-        let entry = sums.entry(key).or_insert((0, 0, 0));
-        entry.0 += r as u32;
-        entry.1 += g as u32;
-        entry.2 += b as u32;
+    for region in regions {
+        let r = region.clamped();
 
-        i += stride_bytes;
+        // Convert normalized -> pixel bounds (inclusive-exclusive).
+        let x_start = (r.left   * width  as f32) as usize;
+        let x_end   = ((r.right  * width  as f32).ceil() as usize).clamp(x_start + 1, width_us);
+        let y_start = (r.top    * height as f32) as usize;
+        let y_end   = ((r.bottom * height as f32).ceil() as usize).clamp(y_start + 1, height_us);
+
+        let rw = x_end - x_start;
+        let rh = y_end - y_start;
+        let region_pixels = rw.checked_mul(rh)?;
+        if region_pixels == 0 { continue; }
+
+        // Spread samples evenly in 2D: pick sqrt(stride) per axis.
+        let stride_pixels = (region_pixels / TARGET_SAMPLES_PER_REGION).max(1);
+        let stride_y = ((stride_pixels as f32).sqrt().round() as usize).max(1);
+        let stride_x = (stride_pixels / stride_y).max(1);
+
+        let mut y = y_start;
+        while y < y_end {
+            let row_offset = y * row_stride_bytes;
+            let mut x = x_start;
+            while x < x_end {
+                let i = row_offset + x * 4;
+
+                // BGRA layout
+                let b = buffer[i];
+                let g = buffer[i + 1];
+                let r_val = buffer[i + 2];
+
+                let key = pack_key(r_val >> SHIFT, g >> SHIFT, b >> SHIFT, BUCKETS as u8);
+
+                *counts.entry(key).or_insert(0) += 1;
+                let entry = sums.entry(key).or_insert((0, 0, 0));
+                entry.0 += r_val as u32;
+                entry.1 += g as u32;
+                entry.2 += b as u32;
+
+                x += stride_x;
+            }
+            y += stride_y;
+        }
     }
 
     let (best_key, best_count) = counts.into_iter().max_by_key(|&(_, n)| n)?;
-    if best_count == 0 {
-        return None;
-    }
+    if best_count == 0 { return None; }
 
     let (sr, sg, sb) = sums[&best_key];
     let n = best_count as f32;
 
+    // NOTE: original code had a bug — used `sg` for both r and g.
     Some(Rgb {
-        r: sg as f32 / n,
+        r: sr as f32 / n,
         g: sg as f32 / n,
         b: sb as f32 / n,
     })
-    // Some((sr as f32 / n, sg as f32 / n, sb as f32 / n))
 }
 
 #[inline]
 fn pack_key(r: u8, g: u8, b: u8, buckets: u8) -> u16 {
-    // buckets is 16 for an 8-bit>>4 quantization, fits in 4 bits/channel
     let b_sz = buckets as u16;
     (r as u16) * b_sz * b_sz + (g as u16) * b_sz + (b as u16)
 }

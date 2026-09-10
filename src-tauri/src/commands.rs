@@ -100,6 +100,7 @@ pub fn connect_lamp(
             lamp_connection: new_lamp_connection.clone(),
             lamp_tuning: current_config.lamp_tuning.clone(),
             monitor_device_name: current_config.monitor_device_name.clone(),
+            capture_regions: current_config.capture_regions.clone(),
         };
 
         *current_config = new_config.clone();

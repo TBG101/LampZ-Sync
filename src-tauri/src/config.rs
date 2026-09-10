@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::detector;
+
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct LampTuning {
     pub poll_interval_ms: u64,
@@ -30,10 +32,26 @@ pub struct LampConnection {
     pub lamp_ip: Option<String>,
 }
 
-
-#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Config {
     pub lamp_connection: LampConnection,
     pub lamp_tuning: LampTuning,
     pub monitor_device_name: Option<String>,
+    #[serde(default = "default_capture_regions")]
+    pub capture_regions: Vec<detector::CaptureRegion>,
+}
+
+fn default_capture_regions() -> Vec<detector::CaptureRegion> {
+    vec![detector::CaptureRegion::FULL]
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            lamp_connection: LampConnection::default(),
+            lamp_tuning: LampTuning::default(),
+            monitor_device_name: None,
+            capture_regions: default_capture_regions(),
+        }
+    }
 }

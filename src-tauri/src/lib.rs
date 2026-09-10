@@ -40,10 +40,16 @@ fn start_lampz_sync(
     app: &AppHandle,
     monitor_sender: Receiver<String>,
     initial_device_name: Option<String>,
+    initual_capture_region: Vec<detector::CaptureRegion>,
 ) {
     let mailbox = Arc::clone(&state.mailbox);
 
-    capture_thread::start_capture_thread(Arc::clone(&mailbox), monitor_sender, initial_device_name);
+    capture_thread::start_capture_thread(
+        Arc::clone(&mailbox),
+        monitor_sender,
+        initial_device_name,
+        initual_capture_region,
+    );
 
     lamp_thread::start_lamp_thread(&app.clone());
 }
@@ -55,6 +61,7 @@ pub fn run() {
             latest_color: None,
             connection_changed: None,
             lamp_tuning_changed: None,
+            region_changed: None,
         }),
         Condvar::new(),
     ));
@@ -133,6 +140,7 @@ pub fn run() {
                 &app.handle(),
                 monitor_rx,
                 config.monitor_device_name.clone(),
+                config.capture_regions.clone(),
             );
 
             if let Some(window) = app.get_webview_window("main") {
