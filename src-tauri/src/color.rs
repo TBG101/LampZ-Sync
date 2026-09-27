@@ -14,11 +14,11 @@ impl Hsv {
         circular_diff >= threshold
     }
     pub fn saturation_changed(&self, other: &Hsv, threshold: u16) -> bool {
-        let diff = self.s.abs_diff(other.h);
+        let diff = self.s.abs_diff(other.s);
         diff >= threshold
     }
     pub fn v_changed(&self, other: &Hsv, threshold: u16) -> bool {
-        let diff = self.v.abs_diff(other.h);
+        let diff = self.v.abs_diff(other.v);
         diff >= threshold
     }
 }
