@@ -160,3 +160,14 @@ pub fn update_capture_regions(
         config.capture_regions = capture_regions;
     })
 }
+
+#[tauri::command]
+pub fn set_sync_enabled(
+    app_handle: AppHandle,
+    state: State<'_, Arc<AppState>>,
+    enabled: bool,
+) -> Result<(), String> {
+    update_config(&app_handle, state.inner(), move |config| {
+        config.sync_enabled = enabled;
+    })
+}

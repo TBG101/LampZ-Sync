@@ -7,10 +7,12 @@ import MonitorSelect from "./components/MonitorSelect";
 import Panel from "./components/Panel";
 import SliderControl from "./components/SliderControl";
 import Titlebar from "./components/Titlebar";
+import ToggleSwitch from "./components/ToggleSwitch";
 import {
   getConfig,
   getMonitors,
   invokeConnectLamp,
+  invokeSetSyncEnabled,
   invokeUpdateCaptureRegions,
   invokeUpdateLampTuning,
   setMonitor,
@@ -48,6 +50,7 @@ function App() {
   const [captureRegions, setCaptureRegions] = useState<CaptureRegion[]>([]);
   const [captureSaveState, setCaptureSaveState] = useState<"idle" | "saved" | "error">("idle");
   const [isSavingCaptureRegions, setIsSavingCaptureRegions] = useState(false);
+  const [syncEnabled, setSyncEnabled] = useState(true);
 
   useEffect(() => {
     Promise.all([getConfig(), getMonitors()])
@@ -60,6 +63,7 @@ function App() {
         });
         setLampTuning(config.lamp_tuning);
         setCaptureRegions(config.capture_regions);
+        setSyncEnabled(config.sync_enabled);
 
         const savedMonitor = config.monitor_device_name;
         const fallbackMonitor =
@@ -90,6 +94,17 @@ function App() {
       ...current,
       [field]: event.target.value,
     }));
+  }
+
+  async function toggleSync(enabled: boolean) {
+    setSyncEnabled(enabled);
+
+    try {
+      await invokeSetSyncEnabled(enabled);
+    } catch (error) {
+      console.error(error);
+      setSyncEnabled(!enabled);
+    }
   }
 
   async function saveCaptureRegions() {
@@ -183,6 +198,19 @@ return (
         >
           <Panel index="02" title="Visual response">
             <div className="flex flex-col gap-4 pt-4">
+              <section className="border-b border-line pb-4">
+                <ToggleSwitch
+                  label={syncEnabled ? "Sync active" : "Sync paused"}
+                  description={
+                    syncEnabled
+                      ? "The screen is sampled and the lamp follows along."
+                      : "Screen sampling and lamp updates are stopped."
+                  }
+                  checked={syncEnabled}
+                  onChange={toggleSync}
+                />
+              </section>
+
               <section className="grid gap-2">
                 <label className="text-[13px] font-semibold text-label" htmlFor="monitor">
                   Monitor

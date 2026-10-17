@@ -48,6 +48,9 @@ pub struct Config {
     pub monitor_device_name: Option<String>,
     #[serde(default = "default_capture_regions")]
     pub capture_regions: Vec<detector::CaptureRegion>,
+    /// Whether screen capture/detection and lamp updates are running.
+    #[serde(default = "default_sync_enabled")]
+    pub sync_enabled: bool,
     /// Monotonic revision bumped on every persisted change. Not serialized.
     #[serde(skip, default)]
     #[ts(skip)]
@@ -58,6 +61,10 @@ fn default_capture_regions() -> Vec<detector::CaptureRegion> {
     vec![detector::CaptureRegion::FULL]
 }
 
+fn default_sync_enabled() -> bool {
+    true
+}
+
 impl Default for Config {
     fn default() -> Self {
         Self {
@@ -65,6 +72,7 @@ impl Default for Config {
             lamp_tuning: LampTuning::default(),
             monitor_device_name: None,
             capture_regions: default_capture_regions(),
+            sync_enabled: true,
             revision: 0,
         }
     }

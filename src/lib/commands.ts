@@ -36,11 +36,16 @@ async function setMonitor(deviceName: string): Promise<void> {
     await invoke("set_monitor", { deviceName });
 }
 
+async function invokeSetSyncEnabled(enabled: boolean): Promise<void> {
+    await invoke("set_sync_enabled", { enabled });
+}
+
 export {
     getConfig,
     getDeviceInfo,
     getMonitors,
     invokeConnectLamp,
+    invokeSetSyncEnabled,
     invokeUpdateCaptureRegions,
     invokeUpdateLampTuning,
     setMonitor,

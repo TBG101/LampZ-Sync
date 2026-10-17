@@ -136,6 +136,14 @@ pub fn start_lamp_thread(app: &AppHandle) {
                 }
             }
 
+            // Sync disabled: stop pushing colors. Reset the diff state so that
+            // resuming forces an immediate update.
+            if !snapshot.sync_enabled {
+                last_hsv_sent = None;
+                last_sent_v = 0;
+                continue;
+            }
+
             let Some(color) = color else {
                 continue;
             };

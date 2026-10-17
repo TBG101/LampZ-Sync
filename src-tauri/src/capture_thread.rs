@@ -27,6 +27,7 @@ pub fn start_capture_thread(
 ) {
     std::thread::spawn(move || {
         let mut regions = state.config.read().unwrap().capture_regions.clone();
+        let mut sync_enabled = state.config.read().unwrap().sync_enabled;
         let mut last_config_revision = state.config.read().unwrap().revision;
 
         let mut current_monitor_device_name = match initial_monitor_device_name {
@@ -76,7 +77,15 @@ pub fn start_capture_thread(
                 if snapshot.revision != last_config_revision {
                     last_config_revision = snapshot.revision;
                     regions = snapshot.capture_regions.clone();
+                    sync_enabled = snapshot.sync_enabled;
                 }
+            }
+
+            // Sync disabled: skip capture/detection entirely. Pacing here is
+            // driven by frame arrival, so sleep to avoid a busy spin.
+            if !sync_enabled {
+                std::thread::sleep(Duration::from_millis(50));
+                continue;
             }
 
             let frame_start = Instant::now();

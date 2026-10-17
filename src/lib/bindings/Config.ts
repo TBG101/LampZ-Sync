@@ -3,4 +3,8 @@ import type { CaptureRegion } from "./CaptureRegion";
 import type { LampConnection } from "./LampConnection";
 import type { LampTuning } from "./LampTuning";
 
-export type Config = { lamp_connection: LampConnection, lamp_tuning: LampTuning, monitor_device_name: string | null, capture_regions: Array<CaptureRegion>, };
+export type Config = { lamp_connection: LampConnection, lamp_tuning: LampTuning, monitor_device_name: string | null, capture_regions: Array<CaptureRegion>, 
+/**
+ * Whether screen capture/detection and lamp updates are running.
+ */
+sync_enabled: boolean, };
