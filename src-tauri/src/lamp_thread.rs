@@ -6,7 +6,7 @@ use tauri::{AppHandle, Emitter, Manager};
 
 use crate::app_state::AppState;
 use crate::color::Hsv;
-use crate::config::{Config, LampConnection, LampTuning};
+use crate::config::{Config, LampConnection, LampMode, LampTuning, StaticColor};
 use crate::lamp;
 
 fn open_lamp(lamp_connection: &LampConnection) -> Result<lamp::Lamp, String> {
@@ -38,6 +38,23 @@ fn connect_or_log(lamp_connection: &LampConnection) -> Option<lamp::Lamp> {
             eprintln!("Lamp connection failed: {error}");
             None
         }
+    }
+}
+
+/// Pushes a fixed color to the lamp. The brightness replaces the value
+/// component so the same hue can be dimmed without changing the swatch.
+fn apply_static_color(lamp: &Option<lamp::Lamp>, color: &StaticColor) {
+    let Some(current_lamp) = lamp.as_ref() else {
+        return;
+    };
+
+    let Some(hsv) = lamp::hex_to_hsv(&color.hex) else {
+        eprintln!("Invalid static color hex: {}", color.hex);
+        return;
+    };
+
+    if let Err(error) = current_lamp.set_hsv(hsv.h, hsv.s, color.brightness) {
+        eprintln!("Failed to set static color: {error}");
     }
 }
 
@@ -77,6 +94,10 @@ pub fn start_lamp_thread(app: &AppHandle) {
 
         let mut lamp = connect_or_log(&initial_config.lamp_connection);
 
+        if initial_config.lamp_mode == LampMode::Static {
+            apply_static_color(&lamp, &initial_config.static_color);
+        }
+
         let mut connected_with = initial_config.lamp_connection.clone();
         let mut lamp_tune = initial_config.lamp_tuning.clone();
         let mut last_config_revision = initial_config.revision;
@@ -103,6 +124,11 @@ pub fn start_lamp_thread(app: &AppHandle) {
                     &mut interval,
                     &mut timeout,
                 );
+
+                // Re-push on every change so a reconnect or color edit lands.
+                if snapshot.lamp_mode == LampMode::Static {
+                    apply_static_color(&lamp, &snapshot.static_color);
+                }
             }
 
             let elapsed = last_update.elapsed();
@@ -136,9 +162,9 @@ pub fn start_lamp_thread(app: &AppHandle) {
                 }
             }
 
-            // Sync disabled: stop pushing colors. Reset the diff state so that
-            // resuming forces an immediate update.
-            if !snapshot.sync_enabled {
+            // Sync disabled, or in static mode: stop pushing colors. Reset the
+            // diff state so that resuming forces an immediate update.
+            if !snapshot.sync_enabled || snapshot.lamp_mode == LampMode::Static {
                 last_hsv_sent = None;
                 last_sent_v = 0;
                 continue;

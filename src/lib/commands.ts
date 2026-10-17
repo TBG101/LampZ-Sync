@@ -3,8 +3,10 @@ import { invoke } from "@tauri-apps/api/core";
 import type { CaptureRegion } from "./bindings/CaptureRegion";
 import type { Config } from "./bindings/Config";
 import type { LampDeviceInfo } from "./bindings/LampDeviceInfo";
+import type { LampMode } from "./bindings/LampMode";
 import type { LampTuning } from "./bindings/LampTuning";
 import type { MonitorInfo } from "./bindings/MonitorInfo";
+import type { StaticColor } from "./bindings/StaticColor";
 
 async function invokeConnectLamp(device: LampDeviceInfo) {
     await invoke("connect_lamp", { lamp: device }).catch((e) => {
@@ -40,14 +42,32 @@ async function invokeSetSyncEnabled(enabled: boolean): Promise<void> {
     await invoke("set_sync_enabled", { enabled });
 }
 
+async function invokeSetLampMode(mode: LampMode): Promise<void> {
+    await invoke("set_lamp_mode", { mode });
+}
+
+async function invokeSetStaticColor(staticColor: StaticColor): Promise<void> {
+    await invoke("set_static_color", { staticColor });
+}
+
 export {
     getConfig,
     getDeviceInfo,
     getMonitors,
     invokeConnectLamp,
+    invokeSetLampMode,
+    invokeSetStaticColor,
     invokeSetSyncEnabled,
     invokeUpdateCaptureRegions,
     invokeUpdateLampTuning,
     setMonitor,
 };
-export type { CaptureRegion, Config as LampConfig, LampDeviceInfo, LampTuning, MonitorInfo };
+export type {
+    CaptureRegion,
+    Config as LampConfig,
+    LampDeviceInfo,
+    LampMode,
+    LampTuning,
+    MonitorInfo,
+    StaticColor,
+};

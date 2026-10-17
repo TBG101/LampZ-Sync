@@ -2,12 +2,43 @@ use rustuya::sync::Device;
 use serde_json::json;
 use std::error::Error;
 
+use crate::color::{Hsv, Rgb};
+
 const DP_POWER: u8 = 20;
 const DP_MODE: u8 = 21;
 const DP_BRIGHTNESS: u8 = 22;
 const DP_TEMPERATURE: u8 = 23;
 const DP_COLOR: u8 = 24;
 const DP_CONTROL: u8 = 28;
+
+/// Parses `#RGB` / `#RRGGBB` into HSV. The caller is expected to override the
+/// value component when a separate brightness is in play.
+pub fn hex_to_hsv(hex: &str) -> Option<Hsv> {
+    let hex = hex.trim().trim_start_matches('#');
+
+    let (r, g, b) = match hex.len() {
+        3 => {
+            let r = u8::from_str_radix(&hex[0..1].repeat(2), 16).ok()?;
+            let g = u8::from_str_radix(&hex[1..2].repeat(2), 16).ok()?;
+            let b = u8::from_str_radix(&hex[2..3].repeat(2), 16).ok()?;
+            (r, g, b)
+        }
+        6 => {
+            let r = u8::from_str_radix(&hex[0..2], 16).ok()?;
+            let g = u8::from_str_radix(&hex[2..4], 16).ok()?;
+            let b = u8::from_str_radix(&hex[4..6], 16).ok()?;
+            (r, g, b)
+        }
+        _ => return None,
+    };
+
+    Some(Rgb {
+        r: r as f32,
+        g: g as f32,
+        b: b as f32,
+    }
+    .rgb_to_hsv())
+}
 
 pub struct Lamp {
     device: Device,

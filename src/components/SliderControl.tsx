@@ -1,5 +1,3 @@
-import type { LampTuning } from "../lib/commands";
-
 function SliderControl({
     label,
     field,
@@ -12,7 +10,7 @@ function SliderControl({
     onChange,
 }: {
     label: string;
-    field: keyof LampTuning;
+    field: string;
     min: string;
     max: string;
     step?: string;

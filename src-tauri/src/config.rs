@@ -37,6 +37,40 @@ pub struct LampConnection {
     pub lamp_ip: Option<String>,
 }
 
+/// What drives the lamp: the sampled screen color or a fixed static color.
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+#[ts(export, export_to = "../../src/lib/bindings/")]
+pub enum LampMode {
+    Sync,
+    Static,
+}
+
+impl Default for LampMode {
+    fn default() -> Self {
+        Self::Sync
+    }
+}
+
+/// A fixed lamp color. `hex` is `#RRGGBB`; `brightness` overrides the value
+/// component (`0..=1000`) so the same hue can be dimmed independently.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../src/lib/bindings/")]
+pub struct StaticColor {
+    pub hex: String,
+    #[ts(type = "number")]
+    pub brightness: u16,
+}
+
+impl Default for StaticColor {
+    fn default() -> Self {
+        Self {
+            hex: "#ffffff".to_string(),
+            brightness: 1000,
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, TS)]
 #[ts(export, export_to = "../../src/lib/bindings/")]
 pub struct Config {
@@ -51,6 +85,12 @@ pub struct Config {
     /// Whether screen capture/detection and lamp updates are running.
     #[serde(default = "default_sync_enabled")]
     pub sync_enabled: bool,
+    /// Whether the lamp follows the screen or shows a fixed static color.
+    #[serde(default)]
+    pub lamp_mode: LampMode,
+    /// The fixed color used when `lamp_mode` is `Static`.
+    #[serde(default)]
+    pub static_color: StaticColor,
     /// Monotonic revision bumped on every persisted change. Not serialized.
     #[serde(skip, default)]
     #[ts(skip)]
@@ -73,6 +113,8 @@ impl Default for Config {
             monitor_device_name: None,
             capture_regions: default_capture_regions(),
             sync_enabled: true,
+            lamp_mode: LampMode::default(),
+            static_color: StaticColor::default(),
             revision: 0,
         }
     }

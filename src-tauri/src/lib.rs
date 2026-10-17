@@ -22,8 +22,8 @@ use tauri::{
 use crate::{
     app_state::{AppState, LampMailbox},
     commands::{
-        connect_lamp, get_config, get_device_info, get_monitors, set_monitor, set_sync_enabled,
-        update_capture_regions, update_lamp_tuning,
+        connect_lamp, get_config, get_device_info, get_monitors, set_lamp_mode, set_monitor,
+        set_static_color, set_sync_enabled, update_capture_regions, update_lamp_tuning,
     },
     config::Config,
 };
@@ -144,7 +144,9 @@ pub fn run() {
             get_config,
             get_device_info,
             get_monitors,
+            set_lamp_mode,
             set_monitor,
+            set_static_color,
             set_sync_enabled,
             update_capture_regions,
             update_lamp_tuning

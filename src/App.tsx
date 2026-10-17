@@ -1,8 +1,10 @@
-import { useEffect, useState, type ChangeEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import "./App.css";
 import Button from "./components/Button";
 import CaptureRegionEditor from "./components/CaptureRegionEditor";
+import ColorPalette from "./components/ColorPalette";
 import Input from "./components/Input";
+import ModeSelector from "./components/ModeSelector";
 import MonitorSelect from "./components/MonitorSelect";
 import Panel from "./components/Panel";
 import SliderControl from "./components/SliderControl";
@@ -12,13 +14,17 @@ import {
   getConfig,
   getMonitors,
   invokeConnectLamp,
+  invokeSetLampMode,
+  invokeSetStaticColor,
   invokeSetSyncEnabled,
   invokeUpdateCaptureRegions,
   invokeUpdateLampTuning,
   setMonitor,
   type CaptureRegion,
+  type LampMode,
   type MonitorInfo,
   type LampTuning,
+  type StaticColor,
 } from "./lib/commands";
 import { startConnectionListen } from "./lib/listeners";
 
@@ -37,6 +43,11 @@ const defaultLampTuning: LampTuning = {
   v_threshold: 10,
 };
 
+const defaultStaticColor: StaticColor = {
+  hex: "#ffffff",
+  brightness: 1000,
+};
+
 function App() {
   const [lamp, setLamp] = useState<LampForm>({
     id: "",
@@ -51,6 +62,9 @@ function App() {
   const [captureSaveState, setCaptureSaveState] = useState<"idle" | "saved" | "error">("idle");
   const [isSavingCaptureRegions, setIsSavingCaptureRegions] = useState(false);
   const [syncEnabled, setSyncEnabled] = useState(true);
+  const [lampMode, setLampMode] = useState<LampMode>("sync");
+  const [staticColor, setStaticColor] = useState<StaticColor>(defaultStaticColor);
+  const staticColorSaveRef = useRef<number | null>(null);
 
   useEffect(() => {
     Promise.all([getConfig(), getMonitors()])
@@ -64,6 +78,8 @@ function App() {
         setLampTuning(config.lamp_tuning);
         setCaptureRegions(config.capture_regions);
         setSyncEnabled(config.sync_enabled);
+        setLampMode(config.lamp_mode);
+        setStaticColor(config.static_color);
 
         const savedMonitor = config.monitor_device_name;
         const fallbackMonitor =
@@ -86,6 +102,7 @@ function App() {
 
     return () => {
       if (unlisten) unlisten();
+      if (staticColorSaveRef.current !== null) window.clearTimeout(staticColorSaveRef.current);
     };
   }, []);
 
@@ -105,6 +122,30 @@ function App() {
       console.error(error);
       setSyncEnabled(!enabled);
     }
+  }
+
+  async function changeLampMode(mode: LampMode) {
+    const previous = lampMode;
+    setLampMode(mode);
+
+    try {
+      await invokeSetLampMode(mode);
+    } catch (error) {
+      console.error(error);
+      setLampMode(previous);
+    }
+  }
+
+  function changeStaticColor(color: StaticColor) {
+    setStaticColor(color);
+
+    if (staticColorSaveRef.current !== null) {
+      window.clearTimeout(staticColorSaveRef.current);
+    }
+
+    staticColorSaveRef.current = window.setTimeout(() => {
+      invokeSetStaticColor(color).catch(console.error);
+    }, 150);
   }
 
   async function saveCaptureRegions() {
@@ -198,17 +239,28 @@ return (
         >
           <Panel index="02" title="Visual response">
             <div className="flex flex-col gap-4 pt-4">
-              <section className="border-b border-line pb-4">
-                <ToggleSwitch
-                  label={syncEnabled ? "Sync active" : "Sync paused"}
-                  description={
-                    syncEnabled
-                      ? "The screen is sampled and the lamp follows along."
-                      : "Screen sampling and lamp updates are stopped."
-                  }
-                  checked={syncEnabled}
-                  onChange={toggleSync}
-                />
+              <section className="grid gap-4 border-b border-line pb-4">
+                <div className="grid gap-2">
+                  <p className="m-0 text-[11px] font-bold uppercase tracking-[.15em] text-section">
+                    Lamp mode
+                  </p>
+                  <ModeSelector value={lampMode} onChange={changeLampMode} />
+                </div>
+
+                {lampMode === "sync" ? (
+                  <ToggleSwitch
+                    label={syncEnabled ? "Sync active" : "Sync paused"}
+                    description={
+                      syncEnabled
+                        ? "The screen is sampled and the lamp follows along."
+                        : "Screen sampling and lamp updates are stopped."
+                    }
+                    checked={syncEnabled}
+                    onChange={toggleSync}
+                  />
+                ) : (
+                  <ColorPalette value={staticColor} onChange={changeStaticColor} />
+                )}
               </section>
 
               <section className="grid gap-2">

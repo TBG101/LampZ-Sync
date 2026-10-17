@@ -7,7 +7,7 @@ use windows_capture::monitor::Monitor;
 use crate::{
     app_state::AppState,
     app_store::save_config,
-    config::{Config, LampConnection, LampTuning},
+    config::{Config, LampConnection, LampMode, LampTuning, StaticColor},
     detector::CaptureRegion,
 };
 
@@ -169,5 +169,30 @@ pub fn set_sync_enabled(
 ) -> Result<(), String> {
     update_config(&app_handle, state.inner(), move |config| {
         config.sync_enabled = enabled;
+    })
+}
+
+#[tauri::command]
+pub fn set_lamp_mode(
+    app_handle: AppHandle,
+    state: State<'_, Arc<AppState>>,
+    mode: LampMode,
+) -> Result<(), String> {
+    update_config(&app_handle, state.inner(), move |config| {
+        config.lamp_mode = mode;
+    })
+}
+
+#[tauri::command]
+pub fn set_static_color(
+    app_handle: AppHandle,
+    state: State<'_, Arc<AppState>>,
+    static_color: StaticColor,
+) -> Result<(), String> {
+    update_config(&app_handle, state.inner(), move |config| {
+        config.static_color = StaticColor {
+            hex: static_color.hex.to_lowercase(),
+            brightness: static_color.brightness,
+        };
     })
 }
