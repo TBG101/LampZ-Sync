@@ -1,11 +1,13 @@
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 use crate::color::Rgb;
 use std::collections::HashMap;
 
 /// Normalized sub-rectangle of a frame. All values in [0.0, 1.0].
 /// `left < right` and `top < bottom` are expected; we clamp defensively.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../src/lib/bindings/")]
 pub struct CaptureRegion {
     pub left:   f32,
     pub right:  f32,

@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tauri::{AppHandle, State};
+use ts_rs::TS;
 use windows_capture::monitor::Monitor;
 
 use crate::{
@@ -10,7 +11,8 @@ use crate::{
     detector::CaptureRegion,
 };
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, TS)]
+#[ts(export, export_to = "../../src/lib/bindings/")]
 pub struct LampDeviceInfo {
     #[serde(rename = "lampId")]
     pub lamp_id: String,
@@ -22,7 +24,8 @@ pub struct LampDeviceInfo {
     pub lamp_key: String,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, TS)]
+#[ts(export, export_to = "../../src/lib/bindings/")]
 pub struct MonitorInfo {
     pub device_name: String,
     pub name: String,

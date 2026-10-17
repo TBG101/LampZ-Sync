@@ -1,10 +1,14 @@
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 use crate::detector;
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../src/lib/bindings/")]
 pub struct LampTuning {
+    #[ts(type = "number")]
     pub poll_interval_ms: u64,
+    #[ts(type = "number")]
     pub mailbox_timeout_secs: u64,
     pub gamma: f32,         // the 2.0 in v.powf(2.0)
     pub hue_threshold: u16, // the 2 in hue_changed
@@ -25,14 +29,16 @@ impl Default for LampTuning {
     }
 }
 
-#[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../src/lib/bindings/")]
 pub struct LampConnection {
     pub lamp_id: Option<String>,
     pub lamp_key: Option<String>,
     pub lamp_ip: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, TS)]
+#[ts(export, export_to = "../../src/lib/bindings/")]
 pub struct Config {
     #[serde(default)]
     pub lamp_connection: LampConnection,
@@ -44,6 +50,7 @@ pub struct Config {
     pub capture_regions: Vec<detector::CaptureRegion>,
     /// Monotonic revision bumped on every persisted change. Not serialized.
     #[serde(skip, default)]
+    #[ts(skip)]
     pub revision: u64,
 }
 
