@@ -1,12 +1,13 @@
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use tauri::{AppHandle, State};
 use windows_capture::monitor::Monitor;
 
 use crate::{
+    app_state::AppState,
     app_store::save_config,
-    config::{LampConnection, LampTuning},
+    config::{Config, LampConnection, LampTuning},
     detector::CaptureRegion,
-    AppState, Config,
 };
 
 #[derive(Deserialize, Serialize)]
@@ -30,6 +31,32 @@ pub struct MonitorInfo {
     pub refresh_rate: u32,
 }
 
+/// The single place where config is mutated, persisted and published.
+///
+/// Every command goes through here, so adding a new option means mutating its
+/// field once — persistence, the revision bump and the worker wake-up happen
+/// automatically. This replaces the old pattern of rebuilding `Config` by hand
+/// in `connect_lamp` (which silently reset any field that was forgotten).
+fn update_config<F>(app_handle: &AppHandle, state: &AppState, mutate: F) -> Result<(), String>
+where
+    F: FnOnce(&mut Config),
+{
+    let (snapshot, epoch) = {
+        let mut config = state.config.write().unwrap();
+        mutate(&mut config);
+        config.revision = config.revision.wrapping_add(1);
+        (config.clone(), config.revision)
+    };
+
+    {
+        let (lock, condvar) = &*state.mailbox;
+        lock.lock().unwrap().config_epoch = epoch;
+        condvar.notify_all();
+    }
+
+    save_config(app_handle, &snapshot)
+}
+
 #[tauri::command]
 pub fn get_monitors() -> Result<Vec<MonitorInfo>, String> {
     Monitor::enumerate()
@@ -49,8 +76,8 @@ pub fn get_monitors() -> Result<Vec<MonitorInfo>, String> {
 
 #[tauri::command]
 pub fn set_monitor(
-    app_handle: tauri::AppHandle,
-    state: tauri::State<'_, Arc<AppState>>,
+    app_handle: AppHandle,
+    state: State<'_, Arc<AppState>>,
     device_name: String,
 ) -> Result<(), String> {
     let monitor_exists = Monitor::enumerate()
@@ -67,61 +94,35 @@ pub fn set_monitor(
         return Err("Monitor no longer exists".to_string());
     }
 
-    let new_config = {
-        let mut config = state.config.write().unwrap();
+    update_config(&app_handle, state.inner(), |config| {
         config.monitor_device_name = Some(device_name.clone());
-        config.clone()
-    };
+    })?;
 
     state
         .monitor_sender
         .send(device_name)
-        .map_err(|error| error.to_string())?;
-
-    save_config(&app_handle, &new_config)
+        .map_err(|error| error.to_string())
 }
 
 #[tauri::command]
 pub fn connect_lamp(
-    app_handle: tauri::AppHandle,
-    state: tauri::State<'_, Arc<AppState>>,
+    app_handle: AppHandle,
+    state: State<'_, Arc<AppState>>,
     lamp: LampDeviceInfo,
 ) -> Result<(), String> {
-    // update the app state
-    let new_config = {
-        let mut current_config = state.config.write().unwrap();
-
-        let new_lamp_connection = LampConnection {
-            lamp_id: Some(lamp.lamp_id),
-            lamp_ip: Some(lamp.lamp_ip),
-            lamp_key: Some(lamp.lamp_key),
-        };
-
-        let new_config = Config {
-            lamp_connection: new_lamp_connection.clone(),
-            lamp_tuning: current_config.lamp_tuning.clone(),
-            monitor_device_name: current_config.monitor_device_name.clone(),
-            capture_regions: current_config.capture_regions.clone(),
-        };
-
-        *current_config = new_config.clone();
-        new_config.clone()
+    let lamp_connection = LampConnection {
+        lamp_id: Some(lamp.lamp_id),
+        lamp_ip: Some(lamp.lamp_ip),
+        lamp_key: Some(lamp.lamp_key),
     };
 
-    // Send the config to other threads (listeners)
-    {
-        let (lock, condvar) = &*state.mailbox;
-        lock.lock().unwrap().connection_changed = Some(new_config.lamp_connection.clone());
-        condvar.notify_one();
-    }
-
-    save_config(&app_handle, &new_config)?;
-
-    Ok(())
+    update_config(&app_handle, state.inner(), move |config| {
+        config.lamp_connection = lamp_connection;
+    })
 }
 
 #[tauri::command]
-pub fn get_device_info(state: tauri::State<'_, Arc<AppState>>) -> LampDeviceInfo {
+pub fn get_device_info(state: State<'_, Arc<AppState>>) -> LampDeviceInfo {
     let config = state.config.read().unwrap();
     LampDeviceInfo {
         lamp_id: config.lamp_connection.lamp_id.clone().unwrap_or_default(),
@@ -131,48 +132,28 @@ pub fn get_device_info(state: tauri::State<'_, Arc<AppState>>) -> LampDeviceInfo
 }
 
 #[tauri::command]
-pub fn get_config(state: tauri::State<'_, Arc<AppState>>) -> Config {
+pub fn get_config(state: State<'_, Arc<AppState>>) -> Config {
     state.config.read().unwrap().clone()
 }
 
 #[tauri::command]
 pub fn update_lamp_tuning(
-    app_handle: tauri::AppHandle,
-    state: tauri::State<'_, Arc<AppState>>,
+    app_handle: AppHandle,
+    state: State<'_, Arc<AppState>>,
     lamp_tuning: LampTuning,
 ) -> Result<(), String> {
-    let new_config = {
-        let mut current_config = state.config.write().unwrap();
-        current_config.lamp_tuning = lamp_tuning.clone();
-        current_config.clone()
-    };
-
-    {
-        let (lock, condvar) = &*state.mailbox;
-        lock.lock().unwrap().lamp_tuning_changed = Some(lamp_tuning);
-        condvar.notify_one();
-    }
-
-    save_config(&app_handle, &new_config)
+    update_config(&app_handle, state.inner(), move |config| {
+        config.lamp_tuning = lamp_tuning;
+    })
 }
 
 #[tauri::command]
 pub fn update_capture_regions(
-    app_handle: tauri::AppHandle,
-    state: tauri::State<'_, Arc<AppState>>,
+    app_handle: AppHandle,
+    state: State<'_, Arc<AppState>>,
     capture_regions: Vec<CaptureRegion>,
 ) -> Result<(), String> {
-    let new_config = {
-        let mut current_config = state.config.write().unwrap();
-        current_config.capture_regions = capture_regions.clone();
-        current_config.clone()
-    };
-
-    {
-        let (lock, condvar) = &*state.mailbox;
-        lock.lock().unwrap().region_changed = Some(capture_regions);
-        condvar.notify_one();
-    }
-
-    save_config(&app_handle, &new_config)
+    update_config(&app_handle, state.inner(), move |config| {
+        config.capture_regions = capture_regions;
+    })
 }

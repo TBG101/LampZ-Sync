@@ -41,31 +41,15 @@ fn start_lampz_sync(
     app: &AppHandle,
     monitor_sender: Receiver<String>,
     initial_device_name: Option<String>,
-    initual_capture_region: Vec<detector::CaptureRegion>,
 ) {
-    let mailbox = Arc::clone(&state.mailbox);
+    capture_thread::start_capture_thread(Arc::clone(&state), monitor_sender, initial_device_name);
 
-    capture_thread::start_capture_thread(
-        Arc::clone(&mailbox),
-        monitor_sender,
-        initial_device_name,
-        initual_capture_region,
-    );
-
-    lamp_thread::start_lamp_thread(&app.clone());
+    lamp_thread::start_lamp_thread(app);
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let mailbox = Arc::new((
-        Mutex::new(LampMailbox {
-            latest_color: None,
-            connection_changed: None,
-            lamp_tuning_changed: None,
-            region_changed: None,
-        }),
-        Condvar::new(),
-    ));
+    let mailbox = Arc::new((Mutex::new(LampMailbox::default()), Condvar::new()));
 
     let (monitor_tx, monitor_rx) = mpsc::channel::<String>();
 
@@ -141,7 +125,6 @@ pub fn run() {
                 &app.handle(),
                 monitor_rx,
                 config.monitor_device_name.clone(),
-                config.capture_regions.clone(),
             );
 
             if let Some(window) = app.get_webview_window("main") {

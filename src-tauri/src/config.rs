@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::detector;
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct LampTuning {
     pub poll_interval_ms: u64,
     pub mailbox_timeout_secs: u64,
@@ -25,20 +25,26 @@ impl Default for LampTuning {
     }
 }
 
-#[derive(Clone, Default, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct LampConnection {
     pub lamp_id: Option<String>,
     pub lamp_key: Option<String>,
     pub lamp_ip: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct Config {
+    #[serde(default)]
     pub lamp_connection: LampConnection,
+    #[serde(default)]
     pub lamp_tuning: LampTuning,
+    #[serde(default)]
     pub monitor_device_name: Option<String>,
     #[serde(default = "default_capture_regions")]
     pub capture_regions: Vec<detector::CaptureRegion>,
+    /// Monotonic revision bumped on every persisted change. Not serialized.
+    #[serde(skip, default)]
+    pub revision: u64,
 }
 
 fn default_capture_regions() -> Vec<detector::CaptureRegion> {
@@ -52,6 +58,7 @@ impl Default for Config {
             lamp_tuning: LampTuning::default(),
             monitor_device_name: None,
             capture_regions: default_capture_regions(),
+            revision: 0,
         }
     }
 }

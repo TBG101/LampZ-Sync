@@ -1,11 +1,14 @@
-use crate::detector::CaptureRegion;
-use crate::screen_capture::ScreenCapture;
-use crate::{app_state::SharedMailbox, detector::detect_color};
+use std::sync::Arc;
 use std::{
     sync::mpsc::Receiver,
     time::{Duration, Instant},
 };
+
 use windows_capture::monitor::Monitor;
+
+use crate::app_state::AppState;
+use crate::screen_capture::ScreenCapture;
+use crate::detector::detect_color;
 
 fn find_monitor(m_device_name: &str) -> Monitor {
     let monitors = Monitor::enumerate().unwrap();
@@ -18,13 +21,14 @@ fn find_monitor(m_device_name: &str) -> Monitor {
 }
 
 pub fn start_capture_thread(
-    mail_box: SharedMailbox,
+    state: Arc<AppState>,
     monitor_rx: Receiver<String>,
     initial_monitor_device_name: Option<String>,
-    initual_capture_region: Vec<CaptureRegion>,
 ) {
     std::thread::spawn(move || {
-        let mut regions = initual_capture_region;
+        let mut regions = state.config.read().unwrap().capture_regions.clone();
+        let mut last_config_revision = state.config.read().unwrap().revision;
+
         let mut current_monitor_device_name = match initial_monitor_device_name {
             Some(device_name) => find_monitor(&device_name).device_name().unwrap(),
             None => Monitor::primary()
@@ -66,10 +70,13 @@ pub fn start_capture_thread(
                 }
             }
 
-            let (lock, _) = &*mail_box;
-
-            if let Some(new_regions) = lock.lock().unwrap().region_changed.take() {
-                regions = new_regions;
+            // Regions come straight from the single source of truth.
+            {
+                let snapshot = state.config.read().unwrap();
+                if snapshot.revision != last_config_revision {
+                    last_config_revision = snapshot.revision;
+                    regions = snapshot.capture_regions.clone();
+                }
             }
 
             let frame_start = Instant::now();
@@ -87,7 +94,7 @@ pub fn start_capture_thread(
                 let start = Instant::now();
 
                 // Send the detected color to the lamp thread
-                let (lock, condvar) = &*mail_box;
+                let (lock, condvar) = &*state.mailbox;
                 lock.lock().unwrap().latest_color = Some(rgb);
                 condvar.notify_one();
 

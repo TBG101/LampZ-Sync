@@ -1,7 +1,6 @@
 // app_store.rs
 
 use crate::Config;
-use serde::{Deserialize, Serialize};
 use tauri::AppHandle;
 use tauri_plugin_store::StoreExt;
 
