@@ -74,7 +74,7 @@ function Titlebar({ title = "LampZ Sync", className = "", isConnected = false }:
 
         <button
           onClick={handleMinimize}
-          className="flex h-full w-11 items-center justify-center text-muted transition-colors hover:bg-white/10 hover:text-ink focus:outline-none focus:ring-1 focus:ring-inset focus:ring-accent active:bg-white/5"
+          className="flex h-full w-11 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-white/10 hover:text-ink focus:outline-none focus:ring-1 focus:ring-inset focus:ring-accent active:bg-white/5"
           aria-label="Minimize"
         >
           <Minus size={12} strokeWidth={1.25} />
@@ -82,7 +82,7 @@ function Titlebar({ title = "LampZ Sync", className = "", isConnected = false }:
 
         <button
           onClick={handleToggleMaximize}
-          className="flex h-full w-11 items-center justify-center text-muted transition-colors hover:bg-white/10 hover:text-ink focus:outline-none focus:ring-1 focus:ring-inset focus:ring-accent active:bg-white/5"
+          className="flex h-full w-11 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-white/10 hover:text-ink focus:outline-none focus:ring-1 focus:ring-inset focus:ring-accent active:bg-white/5"
           aria-label={isMaximized ? "Restore" : "Maximize"}
         >
           {isMaximized ? (
@@ -94,7 +94,7 @@ function Titlebar({ title = "LampZ Sync", className = "", isConnected = false }:
 
         <button
           onClick={handleClose}
-          className="flex h-full w-11 items-center justify-center text-muted transition-colors hover:bg-status-close hover:text-white focus:outline-none focus:ring-1 focus:ring-inset focus:ring-white active:bg-status-close-active"
+          className="flex h-full w-11 cursor-pointer items-center justify-center text-muted transition-colors hover:bg-status-close hover:text-white focus:outline-none focus:ring-1 focus:ring-inset focus:ring-white active:bg-status-close-active"
           aria-label="Close"
         >
           <X size={12} strokeWidth={1.25} />

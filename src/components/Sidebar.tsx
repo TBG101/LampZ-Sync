@@ -62,7 +62,7 @@ function Sidebar({
                                 aria-label={label}
                                 title={label}
                                 aria-current={isActive ? "page" : undefined}
-                                className={`group flex w-full items-center gap-3 border-l-2 px-3 py-2.5 text-left transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-accent max-md:justify-center max-md:px-0 ${
+                                className={`group flex w-full cursor-pointer items-center gap-3 border-l-2 px-3 py-2.5 text-left transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-accent max-md:justify-center max-md:px-0 ${
                                     isActive
                                         ? "border-accent bg-accent/10 text-accent"
                                         : "border-transparent text-muted hover:bg-white/5 hover:text-ink"

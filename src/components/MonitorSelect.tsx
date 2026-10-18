@@ -75,7 +75,7 @@ function MonitorSelect({
     <div ref={containerRef} className="relative">
       <button
         type="button"
-        className={`flex min-h-11 w-full items-center justify-between border bg-input px-3 py-2 text-left text-sm text-ink outline-none transition-colors ${open ? "border-accent ring-2 ring-accent/20" : "border-line hover:border-input-hover"} ${monitors.length === 0 ? "cursor-not-allowed opacity-60" : ""}`}
+        className={`flex min-h-11 w-full cursor-pointer items-center justify-between border bg-input px-3 py-2 text-left text-sm text-ink outline-none transition-colors ${open ? "border-accent ring-2 ring-accent/20" : "border-line hover:border-input-hover"} ${monitors.length === 0 ? "cursor-not-allowed opacity-60" : ""}`}
         aria-controls={listboxId}
         aria-expanded={open}
         aria-haspopup="listbox"
@@ -115,7 +115,7 @@ function MonitorSelect({
                 role="option"
                 aria-selected={isSelected}
                 key={monitor.device_name}
-                className={`flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left text-sm transition-colors ${isHighlighted ? "bg-accent/10 text-accent" : "text-ink hover:bg-accent/5"}`}
+                className={`flex w-full cursor-pointer items-center justify-between gap-3 px-3 py-2.5 text-left text-sm transition-colors ${isHighlighted ? "bg-accent/10 text-accent" : "text-ink hover:bg-accent/5"}`}
                 onMouseEnter={() => setHighlightedIndex(index)}
                 onClick={() => selectMonitor(index)}
               >

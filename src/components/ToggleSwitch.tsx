@@ -27,7 +27,7 @@ function ToggleSwitch({
                 aria-label={label}
                 disabled={disabled}
                 onClick={() => onChange(!checked)}
-                className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-45 ${
+                className={`relative mt-0.5 h-6 w-11 shrink-0 cursor-pointer rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-45 ${
                     checked
                         ? "border-status-online bg-status-online/30"
                         : "border-line bg-background-deep"

@@ -39,7 +39,7 @@ function ColorPalette({
                             aria-pressed={isSelected}
                             onClick={() => onChange({ ...value, hex: preset.hex })}
                             style={{ backgroundColor: preset.hex }}
-                            className={`h-8 w-full border transition focus:outline-none focus:ring-2 focus:ring-accent/40 ${
+                            className={`h-8 w-full cursor-pointer border transition focus:outline-none focus:ring-2 focus:ring-accent/40 ${
                                 isSelected
                                     ? "border-accent ring-2 ring-accent/50"
                                     : "border-line hover:border-accent/60"

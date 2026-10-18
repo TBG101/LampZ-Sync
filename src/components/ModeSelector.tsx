@@ -22,7 +22,7 @@ function ModeSelector({
                         type="button"
                         aria-pressed={isActive}
                         onClick={() => onChange(option.value)}
-                        className={`px-3 py-2 text-[12px] font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-accent/40 ${
+                        className={`cursor-pointer px-3 py-2 text-[12px] font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-accent/40 ${
                             isActive
                                 ? "bg-accent text-button-text"
                                 : "bg-transparent text-muted hover:text-label"
