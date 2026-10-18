@@ -21,6 +21,14 @@ The app runs quietly in the system tray and remembers the configured lamp, monit
 - Run from the Windows system tray and hide the main window without stopping synchronization.
 - Use local screen capture and local-network lamp control; no cloud service is required by LampZ Sync.
 
+## Screenshots
+
+<!-- Drop images into docs/screenshots/ and update the paths below. -->
+
+| Sync mode | Static color |
+| --- | --- |
+| ![LampZ Sync in screen-sync mode](docs/screenshots/sync-mode.png) | ![LampZ Sync in static color mode](docs/screenshots/static-mode.png) |
+
 ## Requirements
 
 LampZ Sync currently targets **Windows** because screen capture is implemented with Windows DXGI Desktop Duplication.

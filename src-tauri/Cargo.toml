@@ -1,8 +1,11 @@
 [package]
 name = "lampz-sync"
 version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+description = "Windows desktop app that mirrors monitor colors to a local Tuya lamp."
+authors = ["Zied Harzallah"]
+license = "MIT"
+repository = "https://github.com/TBG101/LampZ-Sync"
+readme = "../README.md"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
