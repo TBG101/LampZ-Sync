@@ -271,82 +271,86 @@ return (
                     )}
                   </section>
 
-                  <section className="grid gap-2">
-                    <label className="text-[13px] font-semibold text-label" htmlFor="monitor">
-                      Monitor
-                    </label>
-                    <MonitorSelect
-                      monitors={monitors}
-                      value={selectedMonitor}
-                      onChange={(deviceName) => {
-                        setSelectedMonitor(deviceName);
-                        setMonitor(deviceName).catch(console.error);
-                      }}
-                    />
-                  </section>
+                  {lampMode === "sync" && (
+                    <>
+                      <section className="grid gap-2">
+                        <label className="text-[13px] font-semibold text-label" htmlFor="monitor">
+                          Monitor
+                        </label>
+                        <MonitorSelect
+                          monitors={monitors}
+                          value={selectedMonitor}
+                          onChange={(deviceName) => {
+                            setSelectedMonitor(deviceName);
+                            setMonitor(deviceName).catch(console.error);
+                          }}
+                        />
+                      </section>
 
-                  <section className="grid gap-3">
-                    <p className="m-0 text-[11px] font-bold uppercase tracking-[.15em] text-section">
-                      Timing
-                    </p>
-                    <SliderControl
-                      label="Poll Interval"
-                      field="poll_interval_ms"
-                      min="10"
-                      max="1000"
-                      step="10"
-                      unit="ms"
-                      description="How often the screen is sampled."
-                      value={lampTuning.poll_interval_ms}
-                      onChange={(v) => setLampTuning((c) => ({ ...c, poll_interval_ms: v }))}
-                    />
-                  </section>
-                  <section className="grid gap-3">
-                    <p className="m-0 text-[11px] font-bold uppercase tracking-[.15em] text-section">
-                      Color sensitivity
-                    </p>
-                    <SliderControl
-                      label="Gamma Correction"
-                      field="gamma"
-                      min="0.1"
-                      max="5.0"
-                      step="0.1"
-                      unit="x"
-                      description="Controls the brightness curve."
-                      value={lampTuning.gamma}
-                      onChange={(v) => setLampTuning((c) => ({ ...c, gamma: v }))}
-                    />
-                    <SliderControl
-                      label="Hue Threshold"
-                      field="hue_threshold"
-                      min="0"
-                      max="180"
-                      unit="°"
-                      description="Minimum hue shift before an update."
-                      value={lampTuning.hue_threshold}
-                      onChange={(v) => setLampTuning((c) => ({ ...c, hue_threshold: v }))}
-                    />
-                    <SliderControl
-                      label="Saturation Threshold"
-                      field="sat_threshold"
-                      min="0"
-                      max="1000"
-                      step="10"
-                      description="Minimum saturation shift before an update."
-                      value={lampTuning.sat_threshold}
-                      onChange={(v) => setLampTuning((c) => ({ ...c, sat_threshold: v }))}
-                    />
-                    <SliderControl
-                      label="Brightness (V) Threshold"
-                      field="v_threshold"
-                      min="0"
-                      max="1000"
-                      step="10"
-                      description="Minimum brightness shift before an update."
-                      value={lampTuning.v_threshold}
-                      onChange={(v) => setLampTuning((c) => ({ ...c, v_threshold: v }))}
-                    />
-                  </section>
+                      <section className="grid gap-3">
+                        <p className="m-0 text-[11px] font-bold uppercase tracking-[.15em] text-section">
+                          Timing
+                        </p>
+                        <SliderControl
+                          label="Poll Interval"
+                          field="poll_interval_ms"
+                          min="10"
+                          max="1000"
+                          step="10"
+                          unit="ms"
+                          description="How often the screen is sampled."
+                          value={lampTuning.poll_interval_ms}
+                          onChange={(v) => setLampTuning((c) => ({ ...c, poll_interval_ms: v }))}
+                        />
+                      </section>
+                      <section className="grid gap-3">
+                        <p className="m-0 text-[11px] font-bold uppercase tracking-[.15em] text-section">
+                          Color sensitivity
+                        </p>
+                      <SliderControl
+                        label="Gamma Correction"
+                        field="gamma"
+                        min="0.1"
+                        max="5.0"
+                        step="0.1"
+                        unit="x"
+                        description="Controls the brightness curve."
+                        value={lampTuning.gamma}
+                        onChange={(v) => setLampTuning((c) => ({ ...c, gamma: v }))}
+                      />
+                      <SliderControl
+                        label="Hue Threshold"
+                        field="hue_threshold"
+                        min="0"
+                        max="180"
+                        unit="°"
+                        description="Minimum hue shift before an update."
+                        value={lampTuning.hue_threshold}
+                        onChange={(v) => setLampTuning((c) => ({ ...c, hue_threshold: v }))}
+                      />
+                      <SliderControl
+                        label="Saturation Threshold"
+                        field="sat_threshold"
+                        min="0"
+                        max="1000"
+                        step="10"
+                        description="Minimum saturation shift before an update."
+                        value={lampTuning.sat_threshold}
+                        onChange={(v) => setLampTuning((c) => ({ ...c, sat_threshold: v }))}
+                      />
+                      <SliderControl
+                        label="Brightness (V) Threshold"
+                        field="v_threshold"
+                        min="0"
+                        max="1000"
+                        step="10"
+                        description="Minimum brightness shift before an update."
+                        value={lampTuning.v_threshold}
+                        onChange={(v) => setLampTuning((c) => ({ ...c, v_threshold: v }))}
+                      />
+                    </section>
+                    </>
+                  )}
 
                   <Button type="submit" variant="primary">
                     Save tuning <span aria-hidden="true">→</span>
