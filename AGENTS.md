@@ -52,6 +52,7 @@ the snapshot when it changes, so no config field can be silently missed.
 | `src-tauri/src/commands.rs` | Tauri commands + the `update_config` helper |
 | `src-tauri/src/app_store.rs` | Load/save `Config` via the store plugin |
 | `src-tauri/src/lamp_thread.rs` | Reads config, drives the lamp |
+| `src-tauri/src/mcp.rs` | Embedded MCP server (Streamable HTTP) for external agents |
 | `src-tauri/src/capture_thread.rs` | Screen capture + color detection |
 | `src-tauri/src/detector.rs` | Dominant-color detection, `CaptureRegion` |
 | `src/lib/commands.ts` | Frontend wrappers; re-exports generated types |
@@ -81,6 +82,20 @@ the worker threads.
 6. `src/App.tsx`: add state, call the command, render a control.
 7. If a worker must react, add one branch in `lamp_thread::apply_config` or the
    config block in `capture_thread.rs`.
+
+## MCP server (agent control)
+
+`src-tauri/src/mcp.rs` embeds an MCP server so external agents can drive the
+lamp. It is a **Streamable HTTP** server bound to `127.0.0.1` only, started from
+`.setup()` via `mcp::spawn_mcp_supervisor`, which watches `Config::mcp`
+(`enabled`/`port`) and (re)binds as needed. An optional bearer `token` is checked
+by middleware that reads config live, so rotating it needs no restart.
+
+MCP tools are lighting-focused (`get_lamp_state`, `set_color`, `set_brightness`,
+`set_mode`, `set_power`, `set_sync_enabled`). They call the same
+`apply_*` helpers in `commands.rs` that the Tauri commands use, so every change
+still flows through `update_config` (revision bump -> worker wake -> save).
+`Config::powered` is a real power state applied by `lamp_thread` (DP 20).
 
 ## Rules
 - **Every `Config`/`LampTuning` field must have a serde default.** `app_store`

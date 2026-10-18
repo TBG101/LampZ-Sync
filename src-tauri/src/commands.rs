@@ -7,7 +7,7 @@ use windows_capture::monitor::Monitor;
 use crate::{
     app_state::AppState,
     app_store::save_config,
-    config::{Config, LampConnection, LampMode, LampTuning, StaticColor},
+    config::{Config, LampConnection, LampMode, LampTuning, McpConfig, StaticColor},
     detector::CaptureRegion,
 };
 
@@ -40,7 +40,11 @@ pub struct MonitorInfo {
 /// field once — persistence, the revision bump and the worker wake-up happen
 /// automatically. This replaces the old pattern of rebuilding `Config` by hand
 /// in `connect_lamp` (which silently reset any field that was forgotten).
-fn update_config<F>(app_handle: &AppHandle, state: &AppState, mutate: F) -> Result<(), String>
+pub(crate) fn update_config<F>(
+    app_handle: &AppHandle,
+    state: &AppState,
+    mutate: F,
+) -> Result<(), String>
 where
     F: FnOnce(&mut Config),
 {
@@ -58,6 +62,82 @@ where
     }
 
     save_config(app_handle, &snapshot)
+}
+
+// Shared control helpers.
+//
+// These sit on top of `update_config` so both the Tauri commands below and the
+// embedded MCP server (`mcp.rs`) mutate config through the exact same path.
+
+pub(crate) fn apply_lamp_power(
+    app_handle: &AppHandle,
+    state: &AppState,
+    on: bool,
+) -> Result<(), String> {
+    update_config(app_handle, state, move |config| {
+        config.powered = on;
+    })
+}
+
+pub(crate) fn apply_lamp_mode(
+    app_handle: &AppHandle,
+    state: &AppState,
+    mode: LampMode,
+) -> Result<(), String> {
+    update_config(app_handle, state, move |config| {
+        config.lamp_mode = mode;
+    })
+}
+
+pub(crate) fn apply_static_color(
+    app_handle: &AppHandle,
+    state: &AppState,
+    static_color: StaticColor,
+) -> Result<(), String> {
+    update_config(app_handle, state, move |config| {
+        config.static_color = StaticColor {
+            hex: static_color.hex.to_lowercase(),
+            brightness: static_color.brightness,
+        };
+    })
+}
+
+/// Sets the static color, switches to static mode and applies power in a single
+/// revision bump. Used by the MCP "show this color" tools.
+pub(crate) fn apply_static_scene(
+    app_handle: &AppHandle,
+    state: &AppState,
+    static_color: StaticColor,
+    powered: bool,
+) -> Result<(), String> {
+    update_config(app_handle, state, move |config| {
+        config.static_color = StaticColor {
+            hex: static_color.hex.to_lowercase(),
+            brightness: static_color.brightness,
+        };
+        config.lamp_mode = LampMode::Static;
+        config.powered = powered;
+    })
+}
+
+pub(crate) fn apply_sync_enabled(
+    app_handle: &AppHandle,
+    state: &AppState,
+    enabled: bool,
+) -> Result<(), String> {
+    update_config(app_handle, state, move |config| {
+        config.sync_enabled = enabled;
+    })
+}
+
+pub(crate) fn apply_mcp_config(
+    app_handle: &AppHandle,
+    state: &AppState,
+    mcp: McpConfig,
+) -> Result<(), String> {
+    update_config(app_handle, state, move |config| {
+        config.mcp = mcp;
+    })
 }
 
 #[tauri::command]
@@ -167,9 +247,7 @@ pub fn set_sync_enabled(
     state: State<'_, Arc<AppState>>,
     enabled: bool,
 ) -> Result<(), String> {
-    update_config(&app_handle, state.inner(), move |config| {
-        config.sync_enabled = enabled;
-    })
+    apply_sync_enabled(&app_handle, state.inner(), enabled)
 }
 
 #[tauri::command]
@@ -178,9 +256,7 @@ pub fn set_lamp_mode(
     state: State<'_, Arc<AppState>>,
     mode: LampMode,
 ) -> Result<(), String> {
-    update_config(&app_handle, state.inner(), move |config| {
-        config.lamp_mode = mode;
-    })
+    apply_lamp_mode(&app_handle, state.inner(), mode)
 }
 
 #[tauri::command]
@@ -189,10 +265,23 @@ pub fn set_static_color(
     state: State<'_, Arc<AppState>>,
     static_color: StaticColor,
 ) -> Result<(), String> {
-    update_config(&app_handle, state.inner(), move |config| {
-        config.static_color = StaticColor {
-            hex: static_color.hex.to_lowercase(),
-            brightness: static_color.brightness,
-        };
-    })
+    apply_static_color(&app_handle, state.inner(), static_color)
+}
+
+#[tauri::command]
+pub fn set_lamp_power(
+    app_handle: AppHandle,
+    state: State<'_, Arc<AppState>>,
+    on: bool,
+) -> Result<(), String> {
+    apply_lamp_power(&app_handle, state.inner(), on)
+}
+
+#[tauri::command]
+pub fn update_mcp_config(
+    app_handle: AppHandle,
+    state: State<'_, Arc<AppState>>,
+    mcp: McpConfig,
+) -> Result<(), String> {
+    apply_mcp_config(&app_handle, state.inner(), mcp)
 }

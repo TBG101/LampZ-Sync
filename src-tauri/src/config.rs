@@ -71,6 +71,29 @@ impl Default for StaticColor {
     }
 }
 
+/// Local MCP (Model Context Protocol) server used by external agents to drive
+/// the lamp. Binds to `127.0.0.1` only.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../src/lib/bindings/")]
+pub struct McpConfig {
+    /// Whether the embedded MCP server is running.
+    pub enabled: bool,
+    /// TCP port the Streamable HTTP endpoint listens on.
+    pub port: u16,
+    /// Optional bearer token. Empty/`None` leaves the endpoint unauthenticated.
+    pub token: Option<String>,
+}
+
+impl Default for McpConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            port: 7331,
+            token: None,
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, TS)]
 #[ts(export, export_to = "../../src/lib/bindings/")]
 pub struct Config {
@@ -91,6 +114,13 @@ pub struct Config {
     /// The fixed color used when `lamp_mode` is `Static`.
     #[serde(default)]
     pub static_color: StaticColor,
+    /// Master power for the lamp. When off, no colors are pushed and the lamp is
+    /// turned off at the driver level.
+    #[serde(default = "default_powered")]
+    pub powered: bool,
+    /// Embedded MCP server settings for external agents.
+    #[serde(default)]
+    pub mcp: McpConfig,
     /// Monotonic revision bumped on every persisted change. Not serialized.
     #[serde(skip, default)]
     #[ts(skip)]
@@ -105,6 +135,10 @@ fn default_sync_enabled() -> bool {
     true
 }
 
+fn default_powered() -> bool {
+    true
+}
+
 impl Default for Config {
     fn default() -> Self {
         Self {
@@ -115,6 +149,8 @@ impl Default for Config {
             sync_enabled: true,
             lamp_mode: LampMode::default(),
             static_color: StaticColor::default(),
+            powered: true,
+            mcp: McpConfig::default(),
             revision: 0,
         }
     }

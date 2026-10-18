@@ -94,13 +94,18 @@ pub fn start_lamp_thread(app: &AppHandle) {
 
         let mut lamp = connect_or_log(&initial_config.lamp_connection);
 
-        if initial_config.lamp_mode == LampMode::Static {
+        if !initial_config.powered {
+            if let Some(current_lamp) = lamp.as_ref() {
+                let _ = current_lamp.off();
+            }
+        } else if initial_config.lamp_mode == LampMode::Static {
             apply_static_color(&lamp, &initial_config.static_color);
         }
 
         let mut connected_with = initial_config.lamp_connection.clone();
         let mut lamp_tune = initial_config.lamp_tuning.clone();
         let mut last_config_revision = initial_config.revision;
+        let mut last_powered = initial_config.powered;
 
         let mut interval = Duration::from_millis(lamp_tune.poll_interval_ms);
         let mut timeout = Duration::from_secs(lamp_tune.mailbox_timeout_secs);
@@ -116,6 +121,9 @@ pub fn start_lamp_thread(app: &AppHandle) {
             let snapshot = state.config.read().unwrap().clone();
             if snapshot.revision != last_config_revision {
                 last_config_revision = snapshot.revision;
+
+                let reconnected = snapshot.lamp_connection != connected_with;
+
                 apply_config(
                     &snapshot,
                     &mut lamp,
@@ -124,6 +132,28 @@ pub fn start_lamp_thread(app: &AppHandle) {
                     &mut interval,
                     &mut timeout,
                 );
+
+                // Apply power transitions. A reconnect also powers the lamp on
+                // (see `open_lamp`), so reconcile when it is meant to be off.
+                if snapshot.powered != last_powered || (reconnected && !snapshot.powered) {
+                    last_powered = snapshot.powered;
+
+                    if let Some(current_lamp) = lamp.as_ref() {
+                        let result = if snapshot.powered {
+                            current_lamp.on()
+                        } else {
+                            current_lamp.off()
+                        };
+
+                        if let Err(error) = result {
+                            eprintln!("Failed to set lamp power: {error}");
+                        }
+                    }
+
+                    // Force an immediate color push when powering back on.
+                    last_hsv_sent = None;
+                    last_sent_v = 0;
+                }
 
                 // Re-push on every change so a reconnect or color edit lands.
                 if snapshot.lamp_mode == LampMode::Static {
@@ -162,9 +192,9 @@ pub fn start_lamp_thread(app: &AppHandle) {
                 }
             }
 
-            // Sync disabled, or in static mode: stop pushing colors. Reset the
-            // diff state so that resuming forces an immediate update.
-            if !snapshot.sync_enabled || snapshot.lamp_mode == LampMode::Static {
+            // Powered off, sync disabled, or in static mode: stop pushing
+            // colors. Reset the diff state so resuming forces an update.
+            if !snapshot.powered || !snapshot.sync_enabled || snapshot.lamp_mode == LampMode::Static {
                 last_hsv_sent = None;
                 last_sent_v = 0;
                 continue;

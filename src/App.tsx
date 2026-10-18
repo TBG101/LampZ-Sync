@@ -4,6 +4,7 @@ import Button from "./components/Button";
 import CaptureRegionEditor from "./components/CaptureRegionEditor";
 import ColorPalette from "./components/ColorPalette";
 import Input from "./components/Input";
+import McpPanel from "./components/McpPanel";
 import ModeSelector from "./components/ModeSelector";
 import MonitorSelect from "./components/MonitorSelect";
 import Panel from "./components/Panel";
@@ -16,13 +17,16 @@ import {
   getMonitors,
   invokeConnectLamp,
   invokeSetLampMode,
+  invokeSetLampPower,
   invokeSetStaticColor,
   invokeSetSyncEnabled,
   invokeUpdateCaptureRegions,
   invokeUpdateLampTuning,
+  invokeUpdateMcpConfig,
   setMonitor,
   type CaptureRegion,
   type LampMode,
+  type McpConfig,
   type MonitorInfo,
   type LampTuning,
   type StaticColor,
@@ -65,6 +69,8 @@ function App() {
   const [syncEnabled, setSyncEnabled] = useState(true);
   const [lampMode, setLampMode] = useState<LampMode>("sync");
   const [staticColor, setStaticColor] = useState<StaticColor>(defaultStaticColor);
+  const [powered, setPowered] = useState(true);
+  const [mcp, setMcp] = useState<McpConfig>({ enabled: false, port: 7331, token: null });
   const staticColorSaveRef = useRef<number | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>("connection");
 
@@ -82,6 +88,8 @@ function App() {
         setSyncEnabled(config.sync_enabled);
         setLampMode(config.lamp_mode);
         setStaticColor(config.static_color);
+        setPowered(config.powered);
+        setMcp(config.mcp);
 
         const savedMonitor = config.monitor_device_name;
         const fallbackMonitor =
@@ -148,6 +156,23 @@ function App() {
     staticColorSaveRef.current = window.setTimeout(() => {
       invokeSetStaticColor(color).catch(console.error);
     }, 150);
+  }
+
+  async function changeLampPower(on: boolean) {
+    const previous = powered;
+    setPowered(on);
+
+    try {
+      await invokeSetLampPower(on);
+    } catch (error) {
+      console.error(error);
+      setPowered(previous);
+    }
+  }
+
+  async function saveMcp(next: McpConfig) {
+    await invokeUpdateMcpConfig(next);
+    setMcp(next);
   }
 
   async function saveCaptureRegions() {
@@ -247,6 +272,19 @@ return (
             >
               <Panel index="02" title="Visual response">
                 <div className="flex flex-col gap-4 pt-4">
+                  <section className="border-b border-line pb-4">
+                    <ToggleSwitch
+                      label={powered ? "Lamp on" : "Lamp off"}
+                      description={
+                        powered
+                          ? "The lamp is powered and accepting colors."
+                          : "The lamp is powered off."
+                      }
+                      checked={powered}
+                      onChange={changeLampPower}
+                    />
+                  </section>
+
                   <section className="grid gap-4 border-b border-line pb-4">
                     <div className="grid gap-2">
                       <p className="m-0 text-[11px] font-bold uppercase tracking-[.15em] text-section">
@@ -379,6 +417,12 @@ return (
                   saveState={captureSaveState}
                 />
               </div>
+            </Panel>
+          )}
+
+          {activeTab === "integration" && (
+            <Panel index="04" title="Agent access">
+              <McpPanel value={mcp} onSave={saveMcp} />
             </Panel>
           )}
         </div>

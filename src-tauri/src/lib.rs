@@ -7,6 +7,7 @@ mod config;
 mod detector;
 mod lamp;
 mod lamp_thread;
+mod mcp;
 mod screen_capture;
 
 use std::sync::{
@@ -22,8 +23,9 @@ use tauri::{
 use crate::{
     app_state::{AppState, LampMailbox},
     commands::{
-        connect_lamp, get_config, get_device_info, get_monitors, set_lamp_mode, set_monitor,
-        set_static_color, set_sync_enabled, update_capture_regions, update_lamp_tuning,
+        connect_lamp, get_config, get_device_info, get_monitors, set_lamp_mode, set_lamp_power,
+        set_monitor, set_static_color, set_sync_enabled, update_capture_regions, update_lamp_tuning,
+        update_mcp_config,
     },
     config::Config,
 };
@@ -127,6 +129,9 @@ pub fn run() {
                 config.monitor_device_name.clone(),
             );
 
+            // Start (or wait to start) the embedded MCP server.
+            mcp::spawn_mcp_supervisor(app.handle().clone());
+
             if let Some(window) = app.get_webview_window("main") {
                 let window_for_event = window.clone();
                 window.on_window_event(move |event| {
@@ -145,11 +150,13 @@ pub fn run() {
             get_device_info,
             get_monitors,
             set_lamp_mode,
+            set_lamp_power,
             set_monitor,
             set_static_color,
             set_sync_enabled,
             update_capture_regions,
-            update_lamp_tuning
+            update_lamp_tuning,
+            update_mcp_config
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

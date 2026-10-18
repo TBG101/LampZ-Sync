@@ -1,6 +1,6 @@
-import { Crop, Plug, SlidersHorizontal, type LucideIcon } from "lucide-react";
+import { Bot, Crop, Plug, SlidersHorizontal, type LucideIcon } from "lucide-react";
 
-export type TabId = "connection" | "visual" | "capture";
+export type TabId = "connection" | "visual" | "capture" | "integration";
 
 type Tab = {
     id: TabId;
@@ -31,6 +31,13 @@ const tabs: Tab[] = [
         label: "Capture regions",
         hint: "Screen sampling",
         icon: Crop,
+    },
+    {
+        id: "integration",
+        index: "04",
+        label: "Agent access",
+        hint: "MCP server",
+        icon: Bot,
     },
 ];
 

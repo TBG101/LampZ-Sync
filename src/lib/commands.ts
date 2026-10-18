@@ -5,6 +5,7 @@ import type { Config } from "./bindings/Config";
 import type { LampDeviceInfo } from "./bindings/LampDeviceInfo";
 import type { LampMode } from "./bindings/LampMode";
 import type { LampTuning } from "./bindings/LampTuning";
+import type { McpConfig } from "./bindings/McpConfig";
 import type { MonitorInfo } from "./bindings/MonitorInfo";
 import type { StaticColor } from "./bindings/StaticColor";
 
@@ -50,16 +51,26 @@ async function invokeSetStaticColor(staticColor: StaticColor): Promise<void> {
     await invoke("set_static_color", { staticColor });
 }
 
+async function invokeSetLampPower(on: boolean): Promise<void> {
+    await invoke("set_lamp_power", { on });
+}
+
+async function invokeUpdateMcpConfig(mcp: McpConfig): Promise<void> {
+    await invoke("update_mcp_config", { mcp });
+}
+
 export {
     getConfig,
     getDeviceInfo,
     getMonitors,
     invokeConnectLamp,
     invokeSetLampMode,
+    invokeSetLampPower,
     invokeSetStaticColor,
     invokeSetSyncEnabled,
     invokeUpdateCaptureRegions,
     invokeUpdateLampTuning,
+    invokeUpdateMcpConfig,
     setMonitor,
 };
 export type {
@@ -68,6 +79,7 @@ export type {
     LampDeviceInfo,
     LampMode,
     LampTuning,
+    McpConfig,
     MonitorInfo,
     StaticColor,
 };

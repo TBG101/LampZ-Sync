@@ -3,6 +3,7 @@ import type { CaptureRegion } from "./CaptureRegion";
 import type { LampConnection } from "./LampConnection";
 import type { LampMode } from "./LampMode";
 import type { LampTuning } from "./LampTuning";
+import type { McpConfig } from "./McpConfig";
 import type { StaticColor } from "./StaticColor";
 
 export type Config = { lamp_connection: LampConnection, lamp_tuning: LampTuning, monitor_device_name: string | null, capture_regions: Array<CaptureRegion>, 
@@ -17,4 +18,13 @@ lamp_mode: LampMode,
 /**
  * The fixed color used when `lamp_mode` is `Static`.
  */
-static_color: StaticColor, };
+static_color: StaticColor, 
+/**
+ * Master power for the lamp. When off, no colors are pushed and the lamp is
+ * turned off at the driver level.
+ */
+powered: boolean, 
+/**
+ * Embedded MCP server settings for external agents.
+ */
+mcp: McpConfig, };
