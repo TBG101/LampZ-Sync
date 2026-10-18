@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { Copy, Minus, Square, X } from "lucide-react";
 
 type TitlebarProps = {
   title?: string;
@@ -76,9 +77,7 @@ function Titlebar({ title = "LampZ Sync", className = "", isConnected = false }:
           className="flex h-full w-11 items-center justify-center text-muted transition-colors hover:bg-white/10 hover:text-ink focus:outline-none focus:ring-1 focus:ring-inset focus:ring-accent active:bg-white/5"
           aria-label="Minimize"
         >
-          <svg width="10" height="1" viewBox="0 0 10 1" fill="none">
-            <path d="M0 0.5H10" stroke="currentColor" strokeWidth="1" />
-          </svg>
+          <Minus size={12} strokeWidth={1.25} />
         </button>
 
         <button
@@ -87,28 +86,9 @@ function Titlebar({ title = "LampZ Sync", className = "", isConnected = false }:
           aria-label={isMaximized ? "Restore" : "Maximize"}
         >
           {isMaximized ? (
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-              <rect
-                x="2"
-                y="0"
-                width="8"
-                height="8"
-                stroke="currentColor"
-                strokeWidth="1"
-              />
-              <path d="M0 2V10H8" stroke="currentColor" strokeWidth="1" />
-            </svg>
+            <Copy size={11} strokeWidth={1.25} />
           ) : (
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-              <rect
-                x="0"
-                y="0"
-                width="10"
-                height="10"
-                stroke="currentColor"
-                strokeWidth="1"
-              />
-            </svg>
+            <Square size={11} strokeWidth={1.25} />
           )}
         </button>
 
@@ -117,13 +97,7 @@ function Titlebar({ title = "LampZ Sync", className = "", isConnected = false }:
           className="flex h-full w-11 items-center justify-center text-muted transition-colors hover:bg-status-close hover:text-white focus:outline-none focus:ring-1 focus:ring-inset focus:ring-white active:bg-status-close-active"
           aria-label="Close"
         >
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-            <path
-              d="M1 1L9 9M9 1L1 9"
-              stroke="currentColor"
-              strokeWidth="1"
-            />
-          </svg>
+          <X size={12} strokeWidth={1.25} />
         </button>
       </div>
     </div>
