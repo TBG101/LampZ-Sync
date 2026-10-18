@@ -9,14 +9,14 @@ LampZ Sync is a Windows desktop application that mirrors the colors on a selecte
 
 The app runs quietly in the system tray and remembers the configured lamp, monitor, and visual response settings.
 
-> **Project status:** early development (`0.1.0`). Expect rough edges and breaking changes while the device protocol and user experience continue to evolve.
-
 ## Features
 
 - Connect to a lamp using its device ID, local IP address, and local key.
 - Select which connected monitor supplies the ambient color.
 - Map one or more capture regions on the selected monitor, with move, resize, delete, and snapping controls.
 - Tune polling frequency, gamma correction, and color-change thresholds.
+- Switch between **Sync** and **Static color** modes, and enable or disable syncing on the fly.
+- Expose an embedded MCP server so external agents can drive the lamp.
 - Persist configuration between launches.
 - Run from the Windows system tray and hide the main window without stopping synchronization.
 - Use local screen capture and local-network lamp control; no cloud service is required by LampZ Sync.
@@ -56,8 +56,9 @@ In the app:
 1. Enter the lamp ID, local IP address, and local key.
 2. Select the monitor to sample.
 3. Draw one or more capture regions in the **Capture regions** panel. Use **Snap** to align region edges to the 5% grid or monitor boundaries.
-4. Adjust the visual response settings if needed.
-5. Choose **Connect lamp**, then save the tuning and capture-region settings.
+4. Choose **Sync** or **Static color** mode. In static mode, pick a color and brightness instead of following the screen.
+5. Adjust the visual response settings if needed.
+6. Choose **Connect lamp**, enable syncing, then save the tuning and capture-region settings.
 
 ## Useful Commands
 
@@ -68,6 +69,9 @@ bun run dev
 # Type-check and build the frontend
 bun run build
 
+# Regenerate TypeScript types from the Rust definitions
+bun run bindings
+
 # Build a native Tauri bundle
 bun run tauri build
 
@@ -75,15 +79,24 @@ bun run tauri build
 cargo check --manifest-path src-tauri/Cargo.toml
 ```
 
+## MCP Server
+
+LampZ Sync embeds an [MCP](https://modelcontextprotocol.io) server so external agents can control the lamp. It is a **Streamable HTTP** server bound to `127.0.0.1` only and is disabled by default; enable it under the MCP settings and optionally set a bearer token.
+
+Exposed tools are lighting-focused (`get_lamp_state`, `set_color`, `set_brightness`, `set_mode`, `set_power`, `set_sync_enabled`). They call the same config helpers as the UI, so every change is persisted and picked up by the worker threads.
+
 ## How It Works
 
 The application is split into a React interface and a Rust backend:
 
 - `src/` contains the React and TypeScript settings UI.
+- `src-tauri/src/config.rs` defines the persisted `Config` schema; `app_state.rs` holds the shared `RwLock<Config>`.
 - `src-tauri/src/screen_capture.rs` captures frames from the selected Windows monitor.
 - `src-tauri/src/color.rs` and `src-tauri/src/detector.rs` process frames and detect useful color changes.
 - `src-tauri/src/lamp.rs` sends local Tuya commands to the lamp.
 - `src-tauri/src/capture_thread.rs` and `src-tauri/src/lamp_thread.rs` coordinate screen sampling and lamp updates.
+- `src-tauri/src/commands.rs` exposes Tauri commands and is the single path that mutates, saves, and publishes config changes.
+- `src-tauri/src/mcp.rs` runs the embedded MCP server.
 - `src-tauri/src/app_store.rs` persists application settings through the Tauri store plugin.
 
 The frontend communicates with the backend through Tauri commands. Runtime work stays in Rust threads so screen capture and network communication do not block the interface.
