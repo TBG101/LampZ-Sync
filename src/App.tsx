@@ -7,6 +7,7 @@ import Input from "./components/Input";
 import ModeSelector from "./components/ModeSelector";
 import MonitorSelect from "./components/MonitorSelect";
 import Panel from "./components/Panel";
+import Sidebar, { type TabId } from "./components/Sidebar";
 import SliderControl from "./components/SliderControl";
 import Titlebar from "./components/Titlebar";
 import ToggleSwitch from "./components/ToggleSwitch";
@@ -65,6 +66,7 @@ function App() {
   const [lampMode, setLampMode] = useState<LampMode>("sync");
   const [staticColor, setStaticColor] = useState<StaticColor>(defaultStaticColor);
   const staticColorSaveRef = useRef<number | null>(null);
+  const [activeTab, setActiveTab] = useState<TabId>("connection");
 
   useEffect(() => {
     Promise.all([getConfig(), getMonitors()])
@@ -170,206 +172,214 @@ return (
     {/* Titlebar stays fixed at the top */}
     <Titlebar isConnected={lampConnection} />
 
-    {/* Scrollbar lives strictly inside this container below the titlebar */}
-    <main className="flex-1 overflow-y-auto px-6 pb-6 pt-6 md:px-12 md:pb-10">
-      <div className="mx-auto grid max-w-[1180px] grid-cols-[minmax(260px,.75fr)_minmax(420px,1.25fr)] items-start gap-5 max-md:grid-cols-1">
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            invokeConnectLamp({
-              lampId: lamp.id,
-              lampIp: lamp.ip,
-              lampKey: lamp.localKey,
-            });
-          }}
-        >
-          <Panel index="01" title="Device connection" sticky>
-            <div className="my-5 grid gap-4">
-              <div className="grid gap-2">
-                <label className="text-[13px] font-semibold text-label" htmlFor="id">
-                  Lamp ID
-                </label>
-                <Input
-                  id="id"
-                  name="id"
-                  value={lamp.id}
-                  onChange={(event: ChangeEvent<HTMLInputElement>) => updateField("id", event)}
-                  placeholder="e.g. lamp_12345"
-                />
-              </div>
+    <div className="flex min-h-0 flex-1 overflow-hidden">
+      <Sidebar active={activeTab} onChange={setActiveTab} />
 
-              <div className="grid gap-2">
-                <label className="text-[13px] font-semibold text-label" htmlFor="ip">
-                  IP address
-                </label>
-                <Input
-                  id="ip"
-                  name="ip"
-                  value={lamp.ip}
-                  onChange={(event: ChangeEvent<HTMLInputElement>) => updateField("ip", event)}
-                  placeholder="192.168.1.100"
-                />
-              </div>
+      {/* Scrollbar lives strictly inside this container, beside the sidebar */}
+      <main className="flex-1 overflow-y-auto px-6 pb-6 pt-6 md:px-12 md:pb-10">
+        <div className="mx-auto w-full max-w-[860px]">
+          {activeTab === "connection" && (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                invokeConnectLamp({
+                  lampId: lamp.id,
+                  lampIp: lamp.ip,
+                  lampKey: lamp.localKey,
+                });
+              }}
+            >
+              <Panel index="01" title="Device connection">
+                <div className="my-5 grid gap-4">
+                  <div className="grid gap-2">
+                    <label className="text-[13px] font-semibold text-label" htmlFor="id">
+                      Lamp ID
+                    </label>
+                    <Input
+                      id="id"
+                      name="id"
+                      value={lamp.id}
+                      onChange={(event: ChangeEvent<HTMLInputElement>) => updateField("id", event)}
+                      placeholder="e.g. lamp_12345"
+                    />
+                  </div>
 
-              <div className="grid gap-2">
-                <label className="text-[13px] font-semibold text-label" htmlFor="localKey">
-                  Local key
-                </label>
-                <Input
-                  id="localKey"
-                  name="localKey"
-                  value={lamp.localKey}
-                  onChange={(event: ChangeEvent<HTMLInputElement>) => updateField("localKey", event)}
-                  placeholder="Secret key"
-                />
-              </div>
-            </div>
+                  <div className="grid gap-2">
+                    <label className="text-[13px] font-semibold text-label" htmlFor="ip">
+                      IP address
+                    </label>
+                    <Input
+                      id="ip"
+                      name="ip"
+                      value={lamp.ip}
+                      onChange={(event: ChangeEvent<HTMLInputElement>) => updateField("ip", event)}
+                      placeholder="192.168.1.100"
+                    />
+                  </div>
 
-            <Button type="submit" variant="primary">
-              Connect lamp <span aria-hidden="true">→</span>
-            </Button>
-          </Panel>
-        </form>
-
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            invokeUpdateLampTuning(lampTuning).catch(console.error);
-          }}
-        >
-          <Panel index="02" title="Visual response">
-            <div className="flex flex-col gap-4 pt-4">
-              <section className="grid gap-4 border-b border-line pb-4">
-                <div className="grid gap-2">
-                  <p className="m-0 text-[11px] font-bold uppercase tracking-[.15em] text-section">
-                    Lamp mode
-                  </p>
-                  <ModeSelector value={lampMode} onChange={changeLampMode} />
+                  <div className="grid gap-2">
+                    <label className="text-[13px] font-semibold text-label" htmlFor="localKey">
+                      Local key
+                    </label>
+                    <Input
+                      id="localKey"
+                      name="localKey"
+                      value={lamp.localKey}
+                      onChange={(event: ChangeEvent<HTMLInputElement>) => updateField("localKey", event)}
+                      placeholder="Secret key"
+                    />
+                  </div>
                 </div>
 
-                {lampMode === "sync" ? (
-                  <ToggleSwitch
-                    label={syncEnabled ? "Sync active" : "Sync paused"}
-                    description={
-                      syncEnabled
-                        ? "The screen is sampled and the lamp follows along."
-                        : "Screen sampling and lamp updates are stopped."
-                    }
-                    checked={syncEnabled}
-                    onChange={toggleSync}
-                  />
-                ) : (
-                  <ColorPalette value={staticColor} onChange={changeStaticColor} />
-                )}
-              </section>
+                <Button type="submit" variant="primary">
+                  Connect lamp <span aria-hidden="true">→</span>
+                </Button>
+              </Panel>
+            </form>
+          )}
 
-              <section className="grid gap-2">
-                <label className="text-[13px] font-semibold text-label" htmlFor="monitor">
-                  Monitor
-                </label>
-                <MonitorSelect
-                  monitors={monitors}
-                  value={selectedMonitor}
-                  onChange={(deviceName) => {
-                    setSelectedMonitor(deviceName);
-                    setMonitor(deviceName).catch(console.error);
+          {activeTab === "visual" && (
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                invokeUpdateLampTuning(lampTuning).catch(console.error);
+              }}
+            >
+              <Panel index="02" title="Visual response">
+                <div className="flex flex-col gap-4 pt-4">
+                  <section className="grid gap-4 border-b border-line pb-4">
+                    <div className="grid gap-2">
+                      <p className="m-0 text-[11px] font-bold uppercase tracking-[.15em] text-section">
+                        Lamp mode
+                      </p>
+                      <ModeSelector value={lampMode} onChange={changeLampMode} />
+                    </div>
+
+                    {lampMode === "sync" ? (
+                      <ToggleSwitch
+                        label={syncEnabled ? "Sync active" : "Sync paused"}
+                        description={
+                          syncEnabled
+                            ? "The screen is sampled and the lamp follows along."
+                            : "Screen sampling and lamp updates are stopped."
+                        }
+                        checked={syncEnabled}
+                        onChange={toggleSync}
+                      />
+                    ) : (
+                      <ColorPalette value={staticColor} onChange={changeStaticColor} />
+                    )}
+                  </section>
+
+                  <section className="grid gap-2">
+                    <label className="text-[13px] font-semibold text-label" htmlFor="monitor">
+                      Monitor
+                    </label>
+                    <MonitorSelect
+                      monitors={monitors}
+                      value={selectedMonitor}
+                      onChange={(deviceName) => {
+                        setSelectedMonitor(deviceName);
+                        setMonitor(deviceName).catch(console.error);
+                      }}
+                    />
+                  </section>
+
+                  <section className="grid gap-3">
+                    <p className="m-0 text-[11px] font-bold uppercase tracking-[.15em] text-section">
+                      Timing
+                    </p>
+                    <SliderControl
+                      label="Poll Interval"
+                      field="poll_interval_ms"
+                      min="10"
+                      max="1000"
+                      step="10"
+                      unit="ms"
+                      description="How often the screen is sampled."
+                      value={lampTuning.poll_interval_ms}
+                      onChange={(v) => setLampTuning((c) => ({ ...c, poll_interval_ms: v }))}
+                    />
+                  </section>
+                  <section className="grid gap-3">
+                    <p className="m-0 text-[11px] font-bold uppercase tracking-[.15em] text-section">
+                      Color sensitivity
+                    </p>
+                    <SliderControl
+                      label="Gamma Correction"
+                      field="gamma"
+                      min="0.1"
+                      max="5.0"
+                      step="0.1"
+                      unit="x"
+                      description="Controls the brightness curve."
+                      value={lampTuning.gamma}
+                      onChange={(v) => setLampTuning((c) => ({ ...c, gamma: v }))}
+                    />
+                    <SliderControl
+                      label="Hue Threshold"
+                      field="hue_threshold"
+                      min="0"
+                      max="180"
+                      unit="°"
+                      description="Minimum hue shift before an update."
+                      value={lampTuning.hue_threshold}
+                      onChange={(v) => setLampTuning((c) => ({ ...c, hue_threshold: v }))}
+                    />
+                    <SliderControl
+                      label="Saturation Threshold"
+                      field="sat_threshold"
+                      min="0"
+                      max="1000"
+                      step="10"
+                      description="Minimum saturation shift before an update."
+                      value={lampTuning.sat_threshold}
+                      onChange={(v) => setLampTuning((c) => ({ ...c, sat_threshold: v }))}
+                    />
+                    <SliderControl
+                      label="Brightness (V) Threshold"
+                      field="v_threshold"
+                      min="0"
+                      max="1000"
+                      step="10"
+                      description="Minimum brightness shift before an update."
+                      value={lampTuning.v_threshold}
+                      onChange={(v) => setLampTuning((c) => ({ ...c, v_threshold: v }))}
+                    />
+                  </section>
+
+                  <Button type="submit" variant="primary">
+                    Save tuning <span aria-hidden="true">→</span>
+                  </Button>
+                </div>
+              </Panel>
+            </form>
+          )}
+
+          {activeTab === "capture" && (
+            <Panel index="03" title="Capture regions">
+              <div className="pt-4">
+                <p className="mb-4 max-w-2xl text-sm leading-relaxed text-muted">
+                  Choose the parts of the selected monitor that should influence the lamp. Regions are combined when the screen color is sampled.
+                </p>
+                <CaptureRegionEditor
+                  regions={captureRegions}
+                  monitorWidth={selectedMonitorInfo?.width ?? 0}
+                  monitorHeight={selectedMonitorInfo?.height ?? 0}
+                  onChange={(regions) => {
+                    setCaptureRegions(regions);
+                    setCaptureSaveState("idle");
                   }}
+                  onSave={saveCaptureRegions}
+                  isSaving={isSavingCaptureRegions}
+                  saveState={captureSaveState}
                 />
-              </section>
-
-              <section className="grid gap-3">
-                <p className="m-0 text-[11px] font-bold uppercase tracking-[.15em] text-section">
-                  Timing
-                </p>
-                <SliderControl
-                  label="Poll Interval"
-                  field="poll_interval_ms"
-                  min="10"
-                  max="1000"
-                  step="10"
-                  unit="ms"
-                  description="How often the screen is sampled."
-                  value={lampTuning.poll_interval_ms}
-                  onChange={(v) => setLampTuning((c) => ({ ...c, poll_interval_ms: v }))}
-                />
-              </section>
-              <section className="grid gap-3">
-                <p className="m-0 text-[11px] font-bold uppercase tracking-[.15em] text-section">
-                  Color sensitivity
-                </p>
-                <SliderControl
-                  label="Gamma Correction"
-                  field="gamma"
-                  min="0.1"
-                  max="5.0"
-                  step="0.1"
-                  unit="x"
-                  description="Controls the brightness curve."
-                  value={lampTuning.gamma}
-                  onChange={(v) => setLampTuning((c) => ({ ...c, gamma: v }))}
-                />
-                <SliderControl
-                  label="Hue Threshold"
-                  field="hue_threshold"
-                  min="0"
-                  max="180"
-                  unit="°"
-                  description="Minimum hue shift before an update."
-                  value={lampTuning.hue_threshold}
-                  onChange={(v) => setLampTuning((c) => ({ ...c, hue_threshold: v }))}
-                />
-                <SliderControl
-                  label="Saturation Threshold"
-                  field="sat_threshold"
-                  min="0"
-                  max="1000"
-                  step="10"
-                  description="Minimum saturation shift before an update."
-                  value={lampTuning.sat_threshold}
-                  onChange={(v) => setLampTuning((c) => ({ ...c, sat_threshold: v }))}
-                />
-                <SliderControl
-                  label="Brightness (V) Threshold"
-                  field="v_threshold"
-                  min="0"
-                  max="1000"
-                  step="10"
-                  description="Minimum brightness shift before an update."
-                  value={lampTuning.v_threshold}
-                  onChange={(v) => setLampTuning((c) => ({ ...c, v_threshold: v }))}
-                />
-              </section>
-
-              <Button type="submit" variant="primary">
-                Save tuning <span aria-hidden="true">→</span>
-              </Button>
-            </div>
-          </Panel>
-        </form>
-
-        <section className="col-span-full max-md:col-span-1">
-          <Panel index="03" title="Capture regions">
-            <div className="pt-4">
-              <p className="mb-4 max-w-2xl text-sm leading-relaxed text-muted">
-                Choose the parts of the selected monitor that should influence the lamp. Regions are combined when the screen color is sampled.
-              </p>
-              <CaptureRegionEditor
-                regions={captureRegions}
-                monitorWidth={selectedMonitorInfo?.width ?? 0}
-                monitorHeight={selectedMonitorInfo?.height ?? 0}
-                onChange={(regions) => {
-                  setCaptureRegions(regions);
-                  setCaptureSaveState("idle");
-                }}
-                onSave={saveCaptureRegions}
-                isSaving={isSavingCaptureRegions}
-                saveState={captureSaveState}
-              />
-            </div>
-          </Panel>
-        </section>
-      </div>
-    </main>
+              </div>
+            </Panel>
+          )}
+        </div>
+      </main>
+    </div>
   </div>
 );
 }
